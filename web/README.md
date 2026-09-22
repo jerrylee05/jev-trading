@@ -1,31 +1,31 @@
-# Jev Trader — web
+# JoCoding Futures Desk
 
-Next.js (App Router, TypeScript, CSS Modules — no Tailwind) frontend for Jev Trader:
-one AI trade decision every Monad block.
+Next.js desk for the dry-run trader. Paper only: it shows Jev's buy/sell call, the book, and simulated position. It does not unlock live trading and it does not read `PRIVATE_KEY`.
 
-## Run
+## Run with the trader
+
+Trader on port 3010 (leave 3000 free). From the repo root:
 
 ```bash
-export BUN_INSTALL_CACHE_DIR="$TMPDIR/bun-cache" BUN_RUNTIME_TRANSPILER_CACHE_PATH=0
-bun install
-bun run dev      # http://localhost:3000
-bun run build
+PORT=3010 DRY_RUN=true bun run start
 ```
 
-Use Bun only — npm is broken on this machine.
+Desk on port 3001, from `web/`:
 
-## Config
+```bash
+bun install
+bun run dev
+```
 
-Copy `.env.example` to `.env.local`. `NEXT_PUBLIC_API_URL` points at the backend
-(default `https://jev-trader-production.up.railway.app`); the app opens an
-EventSource on `$NEXT_PUBLIC_API_URL/events`.
+Open http://localhost:3001. Default API is `http://127.0.0.1:3010` (`GET /` and SSE `/events`). Set `NEXT_PUBLIC_API_URL` to point elsewhere.
 
-## Layout
+`bun run build` then `bun run start` serves the production desk, still on 3001.
 
-- `src/lib/types.ts` — wire types (`BlockEvent`, `Decision`, `Fill`, `Meta`, …)
-- `src/lib/useFeed.ts` — SSE hook: snapshot / block / fill / ping, 1000-event
-  window, 1s→10s reconnect backoff, `connection` state, `avgLatencyMs`
-- `src/lib/useUptime.ts` — `useUptime(startedAt)` → ticking `"hh:mm:ss"`
-- `src/lib/format.ts` — number/address/tx formatting
-- `src/app/globals.css` — design tokens, `pulse`/`breathe` keyframes, `.card`
-- `src/components/<Name>/<Name>.tsx` — UI components (one folder each)
+## What is on screen
+
+- PAPER badge, `dryRun` pill, and `MODEL` pill whenever the snapshot is a dry run (or the model name contains `jev`).
+- Last decision, probabilities, latency, quote, horizon, `upIn10`, late flag.
+- Top of book from `levels` when the trader sends it. Otherwise the best bid and ask, with size `N/A`.
+- 1 second mid, last 60 seconds, with the latest decision marker and fill marks when those events exist.
+- Position, paper PnL, and account equity (`bankrollUsd + pnlUsd`) when the snapshot includes the bankroll.
+- Scores and the Noul checklist render as `N/A`. Those fields are not in the trader status.

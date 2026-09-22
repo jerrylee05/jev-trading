@@ -175,14 +175,20 @@ function reducer(state: State, action: Action): State {
   }
 }
 
+function numOrUndef(v: unknown): number | undefined {
+  return typeof v === "number" && Number.isFinite(v) ? v : undefined;
+}
+
 function parseMeta(raw: Record<string, unknown> | null): Meta | null {
   if (!raw) return null;
   return {
     model: typeof raw.model === "string" ? raw.model : "",
     wallet: typeof raw.wallet === "string" ? raw.wallet : null,
-    dryRun: Boolean(raw.dryRun),
+    dryRun: raw.dryRun !== false,
     market: typeof raw.market === "string" ? raw.market : "MON/USDC",
     startedAt: typeof raw.startedAt === "number" ? raw.startedAt : Date.now(),
+    bankrollUsd: numOrUndef(raw.bankrollUsd),
+    horizonBlocks: numOrUndef(raw.horizonBlocks),
   };
 }
 
