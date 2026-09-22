@@ -10,7 +10,7 @@ import type {
 } from "./types";
 
 const REST = "https://data.alpaca.markets";
-const TRADE_REST = "https://api.alpaca.markets";
+const TRADE_REST = () => deskConfig.alpaca.tradeUrl;
 const STOCK_WS = "wss://stream.data.alpaca.markets/v2/iex";
 const CRYPTO_WS = "wss://stream.data.alpaca.markets/v1beta3/crypto/us";
 
@@ -83,7 +83,7 @@ export function createAlpacaAdapter(): MarketAdapter {
       }
 
       await bucket.take();
-      const res = await fetch(`${TRADE_REST}/v2/assets/${encodeURIComponent(raw)}`, {
+      const res = await fetch(`${TRADE_REST()}/v2/assets/${encodeURIComponent(raw)}`, {
         headers: authHeaders(),
         signal: AbortSignal.timeout(8000),
       });
@@ -109,7 +109,7 @@ export function createAlpacaAdapter(): MarketAdapter {
       if (!alpacaConfigured() || !q.trim()) return [];
       await bucket.take();
       const res = await fetch(
-        `${TRADE_REST}/v2/assets?status=active&asset_class=us_equity`,
+        `${TRADE_REST()}/v2/assets?status=active&asset_class=us_equity`,
         { headers: authHeaders(), signal: AbortSignal.timeout(10000) },
       );
       if (!res.ok) return [];
@@ -189,7 +189,7 @@ export function createAlpacaAdapter(): MarketAdapter {
     async clock() {
       if (!alpacaConfigured()) return { ts: Date.now() };
       await bucket.take();
-      const res = await fetch(`${TRADE_REST}/v2/clock`, {
+      const res = await fetch(`${TRADE_REST()}/v2/clock`, {
         headers: authHeaders(),
         signal: AbortSignal.timeout(5000),
       });

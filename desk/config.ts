@@ -52,6 +52,17 @@ export const deskConfig = {
     keyId: env("ALPACA_API_KEY_ID", "")!.trim(),
     secret: env("ALPACA_API_SECRET_KEY", "")!.trim(),
     feed: (env("ALPACA_DATA_FEED", "iex") ?? "iex").toLowerCase(),
+    /** Trading/assets API host. Paper keys (PK…) must use paper-api, not live api. */
+    tradeUrl: (() => {
+      const override = env("ALPACA_TRADE_URL", "")!.trim();
+      if (override) return override.replace(/\/+$/, "");
+      const paperFlag = bool("ALPACA_PAPER", false);
+      const keyId = env("ALPACA_API_KEY_ID", "")!.trim();
+      const paperKey = paperFlag || /^PK/i.test(keyId);
+      return paperKey
+        ? "https://paper-api.alpaca.markets"
+        : "https://api.alpaca.markets";
+    })(),
   },
   kuruEventsUrl: env("DESK_KURU_EVENTS_URL", "http://127.0.0.1:3010/events")!,
   dbPath: env("DESK_DB_PATH", "data/desk.sqlite")!,
