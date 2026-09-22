@@ -1,12 +1,14 @@
 import type { BarAggregator } from "../bars/aggregator";
-import type { MarketAdapter, SymbolRef, Timeframe } from "../adapters/types";
-import { ALL_TFS } from "../adapters/types";
+import { ALL_TFS, type MarketAdapter, type SymbolRef, type Timeframe } from "../adapters/types";
 import { resolveSymbol, searchSymbols } from "../adapters/registry";
 import { deskConfig } from "../config";
+import { assembleQuote, pickLiveBar, sessionAnchorMs, type WatchQuote } from "../quotes";
 import {
   addWatchSymbol,
+  closeBefore,
   getWatchSymbol,
   insertClosedBar,
+  latestBar,
   listDecisions,
   listFills,
   listPositions,
@@ -45,6 +47,24 @@ export interface DeskRuntime {
   model?: { name: string };
 }
 
+const LIVE_TFS: Timeframe[] = ["1s", "5s", "15s", "1m"];
+
+function listQuotes(rt: DeskRuntime): WatchQuote[] {
+  return listWatchlist().map((row) => {
+    const live = pickLiveBar(LIVE_TFS.map((tf) => rt.aggregator.getLive(row.symbol, tf)));
+    const latest = latestBar(row.symbol, "1m");
+    const anchor = live ? Date.now() : (latest?.t ?? null);
+    const prevClose =
+      anchor != null ? closeBefore(row.symbol, "1m", sessionAnchorMs(anchor, row.asset_class)) : null;
+    return assembleQuote({
+      symbol: row.symbol,
+      live,
+      latest,
+      prevClose,
+    });
+  });
+}
+
 function rowToPublic(w: WatchlistRow) {
   return {
     symbol: w.symbol,
@@ -73,6 +93,7 @@ function snapshot(rt: DeskRuntime) {
       horizonBars: deskConfig.horizonBars,
     },
     symbols: listWatchlist().map(rowToPublic),
+    quotes: listQuotes(rt),
     positions: listPositions(),
     decisions: listDecisions(50),
     fills: listFills(50),
@@ -118,6 +139,10 @@ export function startDeskServer(rt: DeskRuntime) {
 
       if (pathname === "/api/symbols" && req.method === "GET") {
         return json({ symbols: listWatchlist().map(rowToPublic) });
+      }
+
+      if (pathname === "/api/quotes" && req.method === "GET") {
+        return json({ quotes: listQuotes(rt) });
       }
 
       if (pathname === "/api/symbols" && req.method === "POST") {

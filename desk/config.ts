@@ -30,9 +30,12 @@ function parseSymbols(raw: string | undefined): string[] {
     .filter(Boolean);
 }
 
+/** Right-rail default order when DESK_SYMBOLS is unset. */
+export const DEFAULT_DESK_SYMBOLS = ["NVDA", "TSLA", "QQQ", "SPY", "MSTR", "BTCUSD"] as const;
+
 export const deskConfig = {
   port: num("DESK_PORT", 3020),
-  symbols: parseSymbols(env("DESK_SYMBOLS", "NVDA,TSLA,QQQ,SPY,MSTR,BTCUSD")),
+  symbols: parseSymbols(env("DESK_SYMBOLS", DEFAULT_DESK_SYMBOLS.join(","))),
   decisionTf: (env("DESK_DECISION_TF", "1m") ?? "1m") as string,
   horizonBars: num("DESK_HORIZON_BARS", 5),
   intrabarMs: num("DESK_INTRABAR_MS", 5000),

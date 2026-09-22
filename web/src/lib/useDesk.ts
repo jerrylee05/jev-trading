@@ -42,6 +42,16 @@ export type DeskPosition = {
   updated_at: number;
 };
 
+export type DeskQuote = {
+  symbol: string;
+  last: number | null;
+  prev: number | null;
+  /** Percent points. 1.25 means +1.25%. */
+  chgPct: number | null;
+  /** Bar open time of `last`. Older prints must not overwrite a newer one. */
+  asOf: number | null;
+};
+
 export type DeskStatus = {
   phase?: number;
   adapters?: Record<string, string>;
@@ -61,6 +71,7 @@ export type DeskState = {
   live: DeskBar | null;
   decisions: DeskDecision[];
   positions: DeskPosition[];
+  quotes: Record<string, DeskQuote>;
   status: DeskStatus | null;
   error: string | null;
 };
@@ -137,6 +148,44 @@ export function positionForSymbol(
   return positions.find((p) => p.symbol === symbol) ?? null;
 }
 
+function finiteOrNull(n: unknown): number | null {
+  return typeof n === "number" && Number.isFinite(n) ? n : null;
+}
+
+export function quotesBySymbol(list: DeskQuote[] | null | undefined): Record<string, DeskQuote> {
+  const out: Record<string, DeskQuote> = {};
+  for (const q of list ?? []) {
+    if (!q?.symbol) continue;
+    out[q.symbol] = {
+      symbol: q.symbol,
+      last: finiteOrNull(q.last),
+      prev: finiteOrNull(q.prev),
+      chgPct: finiteOrNull(q.chgPct),
+      asOf: finiteOrNull(q.asOf),
+    };
+  }
+  return out;
+}
+
+/** Apply a bar print to the watchlist quote. Ignore bars older than the quote we already have. */
+export function applyBarToQuotes(
+  quotes: Record<string, DeskQuote>,
+  symbol: string,
+  bar: { c: number; t: number },
+): Record<string, DeskQuote> {
+  if (!symbol || !Number.isFinite(bar.c) || !Number.isFinite(bar.t)) return quotes;
+  const cur = quotes[symbol];
+  if (cur?.asOf != null && bar.t < cur.asOf) return quotes;
+  const prev = cur?.prev ?? null;
+  const chgPct =
+    prev != null && Number.isFinite(prev) && prev !== 0 ? ((bar.c - prev) / prev) * 100 : null;
+  if (cur && cur.last === bar.c && cur.asOf === bar.t && cur.chgPct === chgPct) return quotes;
+  return {
+    ...quotes,
+    [symbol]: { symbol, last: bar.c, prev, chgPct, asOf: bar.t },
+  };
+}
+
 export function feedHint(
   sym: DeskSymbol | undefined,
   status: DeskStatus | null,
@@ -176,6 +225,7 @@ const initial: DeskState = {
   live: null,
   decisions: [],
   positions: [],
+  quotes: {},
   status: null,
   error: null,
 };
@@ -215,6 +265,18 @@ export function useDesk(deskUrl: string) {
     [base],
   );
 
+  const refreshQuotes = useCallback(async () => {
+    try {
+      const res = await fetch(`${base}/api/quotes`, { cache: "no-store" });
+      if (!res.ok) return;
+      const body = (await res.json()) as { quotes?: DeskQuote[] };
+      const quotes = quotesBySymbol(body.quotes);
+      setState((s) => ({ ...s, quotes }));
+    } catch {
+      /* quote rail can stay dashed */
+    }
+  }, [base]);
+
   const refreshSymbols = useCallback(async () => {
     try {
       const res = await fetch(`${base}/api/symbols`, { cache: "no-store" });
@@ -229,6 +291,7 @@ export function useDesk(deskUrl: string) {
         selectedRef.current = selected;
         return { ...s, symbols, selected, error: null };
       });
+      void refreshQuotes();
       return symbols;
     } catch (err) {
       setState((s) => ({
@@ -238,7 +301,7 @@ export function useDesk(deskUrl: string) {
       }));
       return [] as DeskSymbol[];
     }
-  }, [base]);
+  }, [base, refreshQuotes]);
 
   const addSymbol = useCallback(
     async (raw: string) => {
@@ -297,6 +360,7 @@ export function useDesk(deskUrl: string) {
             symbols?: DeskSymbol[];
             decisions?: DeskDecision[];
             positions?: DeskPosition[];
+            quotes?: DeskQuote[];
             status?: DeskStatus;
           };
           setState((s) => {
@@ -314,6 +378,7 @@ export function useDesk(deskUrl: string) {
               selected,
               decisions: data.decisions ?? s.decisions,
               positions: data.positions ?? s.positions,
+              quotes: data.quotes ? quotesBySymbol(data.quotes) : s.quotes,
               status: data.status ?? s.status,
               error: null,
             };
@@ -372,15 +437,16 @@ export function useDesk(deskUrl: string) {
             bar: DeskBar;
             live: boolean;
           };
-          if (payload.tf !== "1m") return;
-          if (payload.symbol !== selectedRef.current) return;
+          if (!payload?.symbol || !payload.bar) return;
           setState((s) => {
-            if (s.selected !== payload.symbol) return s;
-            if (payload.live) return { ...s, live: payload.bar };
+            const quotes = applyBarToQuotes(s.quotes, payload.symbol, payload.bar);
+            const forChart = payload.tf === "1m" && s.selected === payload.symbol;
+            if (!forChart) return quotes === s.quotes ? s : { ...s, quotes };
+            if (payload.live) return { ...s, quotes, live: payload.bar };
             const bars = [...s.bars.filter((b) => b.t !== payload.bar.t), payload.bar].sort(
               (a, b) => a.t - b.t,
             );
-            return { ...s, bars: bars.slice(-500), live: null };
+            return { ...s, quotes, bars: bars.slice(-500), live: null };
           });
         } catch {
           /* ignore */

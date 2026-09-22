@@ -11,6 +11,7 @@ import { startDeskServer, maybeBackfill } from "./http/server";
 import { SseHub } from "./http/sse";
 import {
   addWatchSymbol,
+  alignWatchlistOrder,
   listWatchlist,
   openDb,
   watchlistCount,
@@ -79,6 +80,8 @@ async function seedWatchlist() {
     existing.add(outcome.ref.symbol.toUpperCase());
     added++;
   }
+  // Defaults stay in DESK_SYMBOLS order even if an older DB inserted them differently.
+  alignWatchlistOrder(deskConfig.symbols);
   if (added) console.log(`[desk] seeded ${added} watchlist symbol(s)`);
 }
 

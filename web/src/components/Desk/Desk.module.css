@@ -471,109 +471,85 @@
   background: var(--panel);
 }
 
+.watchCols,
+.watchRow,
+.watchRowActive {
+  display: grid;
+  grid-template-columns: minmax(64px, 1fr) 92px 72px;
+  column-gap: 8px;
+  align-items: center;
+}
+
+.watchCols {
+  padding: 4px 10px 2px 12px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.watchCols span:nth-child(n + 2) {
+  text-align: right;
+}
+
 .watchRows {
   list-style: none;
   margin: 0;
-  padding: 4px 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-}
-
-.watchItem {
-  display: grid;
-  grid-template-columns: 1fr 28px;
-  gap: 2px;
-  align-items: stretch;
-  padding: 0 6px;
 }
 
 .watchRow,
 .watchRowActive {
-  display: grid;
-  grid-template-columns: 1fr 18px auto;
-  gap: 6px;
-  align-items: center;
   width: 100%;
+  height: 30px;
+  min-height: 30px;
+  box-sizing: border-box;
   border: 0;
   background: transparent;
   color: var(--text);
   font: inherit;
   text-align: left;
-  padding: 6px 8px;
-  border-radius: 4px;
+  padding: 0 10px 0 12px;
   cursor: pointer;
 }
 
 .watchRow:hover { background: rgba(255, 255, 255, 0.04); }
+
 .watchRowActive {
-  background: rgba(41, 98, 255, 0.18);
-  box-shadow: inset 0 0 0 1px var(--border);
+  background: #2a2e39;
+  box-shadow: inset 3px 0 0 #2962ff;
+}
+
+.watchRow:focus-visible,
+.watchRowActive:focus-visible {
+  outline: 1px solid var(--border);
+  outline-offset: -1px;
 }
 
 .watchSym {
   font-family: var(--font-plex), ui-monospace, monospace;
   font-weight: 700;
   font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.watchAct {
-  font-size: 11px;
-  font-weight: 700;
-  text-align: center;
-}
-
-.watchVenue {
-  font-size: 10px;
-  color: var(--muted);
-  text-transform: uppercase;
-}
-
-.watchDel {
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 16px;
-  line-height: 1;
-  border-radius: 4px;
-}
-.watchDel:hover { color: var(--down); background: rgba(239, 83, 80, 0.12); }
-
-.watchAdd {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 6px;
-  padding: 8px 10px 10px;
-  border-top: 1px solid var(--border);
-}
-
-.watchInput {
-  min-width: 0;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text);
-  border-radius: 4px;
-  padding: 6px 8px;
-  font: inherit;
+.watchLast,
+.watchChg {
+  font-family: var(--font-plex), ui-monospace, monospace;
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
 }
 
-.watchAddBtn {
-  border: 1px solid var(--border);
-  background: var(--panel);
-  color: var(--text);
-  border-radius: 4px;
-  padding: 6px 10px;
-  font: inherit;
+.watchMissing {
+  color: var(--muted);
+  font-family: var(--font-plex), ui-monospace, monospace;
   font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.watchAddBtn:disabled { opacity: 0.5; cursor: default; }
-
-.watchErr {
-  padding: 0 10px 8px;
-  color: var(--down);
-  font-size: 11px;
+  text-align: right;
 }
