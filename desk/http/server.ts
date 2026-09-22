@@ -40,6 +40,9 @@ export interface DeskRuntime {
   status: () => Record<string, unknown>;
   /** Re-subscribe after watchlist changes. */
   resubscribe: () => Promise<void>;
+  /** Phase 2 paper account (optional for back-compat). */
+  paper?: { snapshot: () => Record<string, unknown>; cashUsd: number };
+  model?: { name: string };
 }
 
 function rowToPublic(w: WatchlistRow) {
@@ -57,9 +60,18 @@ function rowToPublic(w: WatchlistRow) {
 function snapshot(rt: DeskRuntime) {
   return {
     startedAt: rt.startedAt,
+    phase: 2,
     model: deskConfig.model,
+    modelName: rt.model?.name ?? deskConfig.model,
     decisionTf: deskConfig.decisionTf,
-    paperCashUsd: deskConfig.paperCashUsd,
+    paperCashUsd: rt.paper?.cashUsd ?? deskConfig.paperCashUsd,
+    paper: rt.paper?.snapshot() ?? {
+      cashUsd: deskConfig.paperCashUsd,
+      notionalUsd: deskConfig.notionalUsd,
+      flipThreshold: deskConfig.flipThreshold,
+      cooldownBars: deskConfig.cooldownBars,
+      horizonBars: deskConfig.horizonBars,
+    },
     symbols: listWatchlist().map(rowToPublic),
     positions: listPositions(),
     decisions: listDecisions(50),
@@ -88,7 +100,15 @@ export function startDeskServer(rt: DeskRuntime) {
       if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
 
       if (pathname === "/healthz") {
-        return json({ ok: true, port: deskConfig.port, startedAt: rt.startedAt, clients: hub.size });
+        return json({
+          ok: true,
+          phase: 2,
+          port: deskConfig.port,
+          startedAt: rt.startedAt,
+          clients: hub.size,
+          model: deskConfig.model,
+          modelName: rt.model?.name ?? deskConfig.model,
+        });
       }
 
       if (pathname === "/api/state" && req.method === "GET") {

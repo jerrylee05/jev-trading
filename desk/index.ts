@@ -1,11 +1,11 @@
 /**
- * Jev Multi-Desk Phase 1 entry.
- * Paper market-data + bar store + HTTP/SSE on DESK_PORT (default 3020).
+ * Jev Multi-Desk Phase 2 entry.
+ * Paper market-data + bar store + HTTP/SSE + decision engine on DESK_PORT (default 3020).
  * Does not start the Monad/Kuru trader loop. Never reads PRIVATE_KEY.
  */
 import { BarAggregator } from "./bars/aggregator";
 import { createAdapters, resolveSymbol } from "./adapters/registry";
-import type { MarketAdapter, SymbolRef } from "./adapters/types";
+import type { SymbolRef } from "./adapters/types";
 import { deskConfig, alpacaConfigured } from "./config";
 import { startDeskServer, maybeBackfill } from "./http/server";
 import { SseHub } from "./http/sse";
@@ -15,6 +15,8 @@ import {
   openDb,
   watchlistCount,
 } from "./store/db";
+import { createPaperAndModel, startDecisionLoop } from "./engine/loop";
+import { resolveDeskModelName } from "./engine/model";
 
 const startedAt = Date.now();
 openDb(deskConfig.dbPath);
@@ -22,18 +24,23 @@ openDb(deskConfig.dbPath);
 const adapters = createAdapters();
 const aggregator = new BarAggregator();
 const hub = new SseHub();
+const { model, paper } = createPaperAndModel();
 
 let unsub: (() => void) | null = null;
+let stopLoop: (() => void) | null = null;
 let adapterStatus: Record<string, string> = {};
 
 function status() {
   return {
+    phase: 2,
     adapters: Object.fromEntries(adapters.map((a) => [a.id, adapterStatus[a.id] ?? "idle"])),
     alpacaConfigured: alpacaConfigured(),
     watchlist: watchlistCount(),
     sseClients: hub.size,
-    model: deskConfig.model,
+    model: resolveDeskModelName(),
+    modelName: model.name,
     jevBackend: deskConfig.jevBackend,
+    paper: paper.snapshot(),
   };
 }
 
@@ -64,7 +71,7 @@ async function backfillAll() {
     const outcome = await resolveSymbol(adapters, row.symbol);
     if (!outcome.ok) continue;
     await maybeBackfill(
-      { adapters, aggregator, hub, startedAt, status, resubscribe },
+      { adapters, aggregator, hub, startedAt, status, resubscribe, paper, model },
       outcome.ref,
     );
   }
@@ -97,11 +104,9 @@ async function resubscribe() {
   const stops: Array<() => void> = [];
   for (const adapter of adapters) {
     const list = byVenue.get(adapter.id) ?? [];
-    // Coinbase is BTCUSD fallback even if venue was alpaca for BTC
     if (adapter.id === "coinbase") {
       const btc = refs.filter((r) => r.symbol === "BTCUSD");
       if (btc.length && !list.some((r) => r.symbol === "BTCUSD")) {
-        // Prefer alpaca if configured; else coinbase
         if (!alpacaConfigured() || !byVenue.get("alpaca")?.some((r) => r.symbol === "BTCUSD")) {
           list.push(...btc.map((r) => ({ ...r, venue: "coinbase", providerSymbol: "BTC-USD" })));
         }
@@ -141,15 +146,22 @@ async function main() {
     startedAt,
     status,
     resubscribe,
+    paper,
+    model,
   });
   await backfillAll();
   await resubscribe();
   setInterval(() => aggregator.roll(Date.now()), 250);
+  stopLoop = startDecisionLoop({ aggregator, hub, paper, model });
   hub.broadcast("status", status());
-  console.log(`[desk] Phase 1 ready model=${deskConfig.model} symbols=${listWatchlist().map((s) => s.symbol).join(",") || "(none)"}`);
+  console.log(
+    `[desk] Phase 2 ready model=${resolveDeskModelName()}(${model.name}) symbols=${listWatchlist().map((s) => s.symbol).join(",") || "(none)"} paperCash=${paper.cashUsd}`,
+  );
 }
 
 main().catch((err) => {
   console.error("[desk] fatal", err);
   process.exit(1);
 });
+
+void stopLoop;
