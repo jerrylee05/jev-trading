@@ -10,11 +10,11 @@ import { deskConfig, alpacaConfigured } from "./config";
 import { startDeskServer, maybeBackfill } from "./http/server";
 import { SseHub } from "./http/sse";
 import {
-  addWatchSymbol,
   listWatchlist,
   openDb,
   watchlistCount,
 } from "./store/db";
+import { seedEmptyWatchlist } from "./store/seed";
 import { createPaperAndModel, startDecisionLoop } from "./engine/loop";
 import { resolveDeskModelName } from "./engine/model";
 
@@ -45,41 +45,9 @@ function status() {
 }
 
 async function seedWatchlist() {
-  // Fill any missing DESK_SYMBOLS defaults. Unresolved equities stay on the rail
-  // as paused placeholders so the UI can show an honest "no feed" state.
-  const existing = new Set(listWatchlist().map((r) => r.symbol.toUpperCase()));
-  let pos = watchlistCount();
-  let added = 0;
-  for (const sym of deskConfig.symbols) {
-    const canon = sym.trim().toUpperCase();
-    if (!canon || existing.has(canon)) continue;
-    const outcome = await resolveSymbol(adapters, sym);
-    if (!outcome.ok) {
-      console.warn(`[desk] seed placeholder ${canon}: ${outcome.reason}`);
-      addWatchSymbol({
-        symbol: canon,
-        venue: "unresolved",
-        asset_class: canon.includes("BTC") ? "crypto" : "us_equity",
-        display: canon,
-        position: pos++,
-        paused: 1,
-      });
-      existing.add(canon);
-      added++;
-      continue;
-    }
-    addWatchSymbol({
-      symbol: outcome.ref.symbol,
-      venue: outcome.ref.venue,
-      asset_class: outcome.ref.assetClass,
-      display: outcome.ref.display,
-      position: pos++,
-      paused: 0,
-    });
-    existing.add(outcome.ref.symbol.toUpperCase());
-    added++;
-  }
-  if (added) console.log(`[desk] seeded ${added} watchlist symbol(s)`);
+  // Empty table only. A saved watchlist is not rewritten and missing names are not filled back in.
+  const result = await seedEmptyWatchlist(deskConfig.symbols, (sym) => resolveSymbol(adapters, sym));
+  if (result.added.length) console.log(`[desk] seeded ${result.added.length} watchlist symbol(s)`);
 }
 
 async function backfillAll() {

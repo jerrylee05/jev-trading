@@ -30,9 +30,13 @@ function parseSymbols(raw: string | undefined): string[] {
     .filter(Boolean);
 }
 
+/** Jerry lock default order. DESK_SYMBOLS overrides this. Either list is inserted only when the watchlist table is empty. */
+export const DEFAULT_DESK_SYMBOLS = ["NVDA", "TSLA", "QQQ", "SPY", "MSTR", "BTCUSD"] as const;
+
 export const deskConfig = {
   port: num("DESK_PORT", 3020),
-  symbols: parseSymbols(env("DESK_SYMBOLS", "NVDA,TSLA,QQQ,SPY,MSTR,BTCUSD")),
+  /** DESK_SYMBOLS override, or DEFAULT_DESK_SYMBOLS. Seeded only into an empty watchlist. */
+  symbols: parseSymbols(env("DESK_SYMBOLS", DEFAULT_DESK_SYMBOLS.join(","))),
   decisionTf: (env("DESK_DECISION_TF", "1m") ?? "1m") as string,
   horizonBars: num("DESK_HORIZON_BARS", 5),
   intrabarMs: num("DESK_INTRABAR_MS", 5000),
