@@ -63,6 +63,11 @@ export default function Desk({
   const hint = feedHint(selected, desk.status, desk.bars.length + (desk.live ? 1 : 0));
   const chartEvents = desk.connection === "live" || desk.symbols.length ? desk.events : feed.events;
   const usingDesk = desk.connection === "live" || desk.events.length > 0;
+  const deskLast = desk.live?.c ?? (desk.bars.length ? desk.bars[desk.bars.length - 1]!.c : null);
+  const deskQuoteMid =
+    usingDesk && deskLast != null && Number.isFinite(deskLast)
+      ? deskLast.toLocaleString(undefined, { maximumFractionDigits: 6 })
+      : null;
   const showAction = usingDesk
     ? deskUi?.action === "buy"
       ? "LONG"
@@ -121,7 +126,7 @@ export default function Desk({
           <span className={styles.pair}>{desk.selected ?? "MULTI"}</span>
         </div>
         <div className={styles.quoteStrip}>
-          <span className={styles.last}>{view.mid}</span>
+          <span className={styles.last}>{deskQuoteMid ?? view.mid}</span>
           <span className={styles.muted}>{view.spread}</span>
           <span className={styles.muted}>{view.touch}</span>
         </div>

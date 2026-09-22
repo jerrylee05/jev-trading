@@ -90,7 +90,14 @@ export function chooseBucket(span: number): { bucketMs: number; label: string } 
       found = true;
     }
   }
-  return found ? best : fallback;
+  if (found) return best;
+  // Long spans (e.g. 500x1m desk bars) exceed the 90-bar cap on every bucket.
+  // Prefer the coarsest bucket that still yields >= 8 bars; else 1m.
+  for (let i = BUCKETS.length - 1; i >= 0; i--) {
+    const b = BUCKETS[i]!;
+    if (span / b.ms >= 8) return asBucket(b);
+  }
+  return asBucket(BUCKETS[BUCKETS.length - 1]!);
 }
 
 /** Floor a print onto a wall-clock bucket start (UTC ms). */

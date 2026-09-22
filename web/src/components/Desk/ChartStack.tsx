@@ -76,6 +76,7 @@ export default function ChartStack(props: ChartStackProps) {
   const frozenRef = useRef<Candle[]>([]);
   const lockedBucketRef = useRef<number | null>(null);
   const dataKeyRef = useRef("");
+  const lastOhlcLenRef = useRef(0);
   const scaleLockedRef = useRef(false);
   const btcKeyRef = useRef("");
 
@@ -85,6 +86,19 @@ export default function ChartStack(props: ChartStackProps) {
   const [showMacd, setShowMacd] = useState(true);
   const [showRsi, setShowRsi] = useState(true);
 
+  // Symbol / series change must drop frozen candles + auto-TF lock; otherwise a
+  // prior feed (e.g. MON mids) merges into BTC history and sticky scale blanks the pane.
+  const seriesGuardRef = useRef(seriesKey);
+  if (seriesGuardRef.current !== seriesKey) {
+    seriesGuardRef.current = seriesKey;
+    frozenRef.current = [];
+    lockedBucketRef.current = null;
+    dataKeyRef.current = "";
+    lastOhlcLenRef.current = 0;
+    scaleLockedRef.current = false;
+    btcKeyRef.current = "";
+  }
+
   const points = useMemo(() => eventMids(events), [events]);
   const span = spanMs(points);
   const short = isShortWindow(span, points.length);
@@ -92,6 +106,12 @@ export default function ChartStack(props: ChartStackProps) {
   const bucketMs = tfMs ?? lockedBucketRef.current ?? auto.bucketMs;
   const bucketLabel = TF_OPTIONS.find((t) => t.ms === bucketMs)?.label ?? auto.label;
 
+  // Relock auto-TF when history backfill arrives (2 live ticks must not freeze 1s).
+  const prevPtsRef = useRef(0);
+  if (points.length > prevPtsRef.current + 5) {
+    lockedBucketRef.current = null;
+  }
+  prevPtsRef.current = points.length;
   if (lockedBucketRef.current == null && points.length >= 2) {
     lockedBucketRef.current = auto.bucketMs;
   }
@@ -262,14 +282,6 @@ export default function ChartStack(props: ChartStackProps) {
     const price = priceRef.current;
     if (!price) return;
     const key = `${seriesKey}:${bucketMs}:${barStyle}`;
-    const reset = dataKeyRef.current !== key;
-    dataKeyRef.current = key;
-    if (reset) {
-      frozenRef.current = [];
-      scaleLockedRef.current = false;
-      btcKeyRef.current = "";
-    }
-
     const ohlc = candles
       .filter((c) => Number.isFinite(c.t0) && Number.isFinite(c.open) && Number.isFinite(c.close))
       .map((c) => ({
@@ -279,9 +291,37 @@ export default function ChartStack(props: ChartStackProps) {
         low: Number(c.low),
         close: Number(c.close),
       }));
+    // Empty first paint must not commit dataKey — otherwise the later bars-only
+    // update path paints a single candle and sticky scale locks to a blank pane.
+    if (!ohlc.length) {
+      if (dataKeyRef.current !== key) {
+        dataKeyRef.current = "";
+        lastOhlcLenRef.current = 0;
+        frozenRef.current = [];
+        scaleLockedRef.current = false;
+        btcKeyRef.current = "";
+        try {
+          price.setData([]);
+        } catch {
+          /* ignore */
+        }
+      }
+      return;
+    }
+    // Live tick can arrive before history backfill; jumping from 1 -> N bars
+    // must setData the full series (update-only would leave a blank sticky pane).
+    const historyJump = ohlc.length > lastOhlcLenRef.current + 1;
+    const reset = dataKeyRef.current !== key || historyJump;
+    dataKeyRef.current = key;
+    lastOhlcLenRef.current = ohlc.length;
+    if (reset) {
+      frozenRef.current = [];
+      scaleLockedRef.current = false;
+      btcKeyRef.current = "";
+    }
     try {
       if (reset) price.setData(ohlc);
-      else if (ohlc.length) price.update(ohlc[ohlc.length - 1]!);
+      else price.update(ohlc[ohlc.length - 1]!);
     } catch (err) {
       // Recover from LWC time-order glitches without blanking the desk shell.
       console.warn("[ChartStack] price set/update failed; resetting series", err);
@@ -368,28 +408,17 @@ export default function ChartStack(props: ChartStackProps) {
     }
 
     const chart = chartRef.current;
-    // Fit + unlock autoScale only on TF/style reset (or first paint). Never on ticks.
+    // Fit only on TF/style/symbol reset (or first paint). Keep autoScale ON —
+    // locking autoScale:false in the same turn as fitContent was blanking the
+    // price pane (indicators still drew; candles sat off-scale).
     if (chart && ohlc.length && (reset || !scaleLockedRef.current)) {
-      const shouldFit = reset || !scaleLockedRef.current;
-      if (reset) {
-        scaleLockedRef.current = false;
-        chart.priceScale("right").applyOptions({ autoScale: true });
-        try {
-          chart.priceScale("btc").applyOptions({ autoScale: true });
-        } catch {
-          /* overlay scale may not exist yet */
-        }
-        chart.timeScale().fitContent();
-      } else if (shouldFit && !scaleLockedRef.current) {
-        // First paint only: one fit, then lock. Do not re-enter on later ticks.
-        chart.timeScale().fitContent();
-      }
-      chart.priceScale("right").applyOptions({ autoScale: false });
+      chart.priceScale("right").applyOptions({ autoScale: true });
       try {
-        chart.priceScale("btc").applyOptions({ autoScale: false });
+        chart.priceScale("btc").applyOptions({ autoScale: true });
       } catch {
-        /* ignore */
+        /* overlay scale may not exist yet */
       }
+      chart.timeScale().fitContent();
       scaleLockedRef.current = true;
     }
     } catch (err) {
@@ -402,6 +431,7 @@ export default function ChartStack(props: ChartStackProps) {
     lockedBucketRef.current = ms;
     frozenRef.current = [];
     dataKeyRef.current = "";
+    lastOhlcLenRef.current = 0;
     scaleLockedRef.current = false;
     btcKeyRef.current = "";
   }
