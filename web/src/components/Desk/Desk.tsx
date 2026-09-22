@@ -169,7 +169,7 @@ export default function Desk({
           <span className={styles.pair}>{desk.selected ?? "MULTI"}</span>
         </div>
         <div className={styles.quoteStrip}>
-          <span className={styles.last}>{deskQuoteMid ?? view.mid}</span>
+          <span className={styles.last}>{usingDesk ? (deskQuoteMid ?? "—") : view.mid}</span>
           <span className={styles.muted}>{usingDesk ? "—" : view.spread}</span>
           <span className={styles.muted}>{usingDesk ? "—" : view.touch}</span>
         </div>
