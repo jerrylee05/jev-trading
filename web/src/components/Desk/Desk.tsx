@@ -117,8 +117,7 @@ export default function Desk({
   const deskQuiet =
     usingDesk &&
     ((desk.bars.length + (desk.live ? 1 : 0)) === 0 || !hasDeskDec);
-  // Option A (deco/Gandalf): hero = MODEL CALL from desk decision — may differ from
-  // POSITION without fighting. Never bare "DECISION LONG" over POSITION SHORT.
+  // Hero = model recommendation; paper position is separate (may differ — show ≠ paper).
   const showAction = !usingDesk
     ? view.late.text === "true" && view.carriedAction
       ? view.carriedAction
@@ -203,6 +202,22 @@ export default function Desk({
         ]
     : view.bars;
 
+  const paperSide =
+    usingDesk
+      ? (deskPos?.qty ?? 0) > 0
+        ? "LONG"
+        : (deskPos?.qty ?? 0) < 0
+          ? "SHORT"
+          : "FLAT"
+      : null;
+  const signalDiffers =
+    usingDesk &&
+    !deskQuiet &&
+    showAction !== "—" &&
+    paperSide != null &&
+    paperSide !== "FLAT" &&
+    showAction !== paperSide;
+
   async function onAdd(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -258,8 +273,11 @@ export default function Desk({
         <main className={styles.main}>
           <section className={styles.decisionBar}>
             <div className={`${styles.decision} ${actionClass(showTone)}`}>
-              <span className={styles.decisionLabel}>Model call</span>
+              <span className={styles.decisionLabel}>Recommend</span>
               <span className={styles.decisionAction}>{showAction}</span>
+              {signalDiffers ? (
+                <span className={styles.signalNote}>≠ paper {paperSide}</span>
+              ) : null}
               <span className={styles.carried}>{carried || " "}</span>
             </div>
             <div className={styles.decisionMeta}>
@@ -365,7 +383,7 @@ export default function Desk({
             <div className={styles.railHead}>Symbol detail</div>
             <dl className={styles.detailGrid}>
               <div>
-                <dt>Position</dt>
+                <dt>Paper position</dt>
                 <dd
                   className={
                     (deskDetail?.tone ?? view.positionTone) === "long"
