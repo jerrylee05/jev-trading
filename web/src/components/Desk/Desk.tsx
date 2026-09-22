@@ -128,14 +128,14 @@ export default function Desk({
       ? view.carriedAction
       : view.action
     : deskQuiet
-      ? "—"
+      ? "No model call yet"
       : deskUi?.action === "buy"
         ? "LONG"
         : deskUi?.action === "sell"
           ? "SHORT"
           : deskUi
             ? "FLAT"
-            : "—";
+            : "No model call yet";
   const showTone = !usingDesk
     ? view.late.text === "true" && view.carriedAction
       ? "hold"
@@ -276,8 +276,8 @@ export default function Desk({
 
       <div className={styles.body}>
         <main className={styles.main}>
-          <section className={styles.decisionBar}>
-            <div className={`${styles.decision} ${actionClass(showTone)}`}>
+          <section className={styles.decisionBar} data-testid="recommend-bar">
+            <div className={`${styles.decision} ${actionClass(showTone)}`} data-testid="recommend-action">
               <span className={styles.decisionLabel}>Recommend</span>
               <span className={styles.decisionAction}>{showAction}</span>
               {signalDiffers ? (
@@ -285,6 +285,12 @@ export default function Desk({
               ) : null}
               <span className={styles.carried}>{carried || " "}</span>
             </div>
+            {deskQuiet ? (
+              <div className={styles.recommendEmpty} data-testid="recommend-empty">
+                Quiet — no equity model call for this symbol yet.
+              </div>
+            ) : (
+              <>
             <div className={styles.decisionMeta}>
               <div>
                 <span className={styles.lbl}>confidence</span>
@@ -314,6 +320,8 @@ export default function Desk({
                 </div>
               ))}
             </div>
+              </>
+            )}
           </section>
 
           {hint ? <div className={styles.feedHint}>{hint}</div> : null}
