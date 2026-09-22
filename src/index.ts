@@ -37,5 +37,7 @@ const trader = new Trader(
 );
 trader.attachTradeFeed(log10(market.params.sizePrecision));
 
+if (config.dryRun && config.privateKey) console.log("PRIVATE_KEY is set but dry-run is active; no transactions will be sent.");
+if (!config.dryRun) console.warn(`LIVE TRADING · wallet ${market.address} · real orders every block`);
 console.log(`jev-trader · model=${model.name} · post-only ${config.quoteInsideTicks} tick inside the touch · horizon ${config.horizonBlocks} blocks · ${config.dryRun ? "DRY RUN" : `wallet ${market.address}`} · market ${config.market} · read ${config.readRpcUrl} · :${config.port}`);
 startBlockFeed((block) => trader.onBlock(block));

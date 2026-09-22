@@ -8,7 +8,9 @@ One decision every Monad block. A TypeSafe Jev model watches the Kuru MON-USDC o
     bun install
     bun run start
 
-With no `PRIVATE_KEY` it dry-runs: real book, real decisions, simulated fills. Set `MODEL=jev` and `TYPESAFE_AI_API_KEY` to use Jev; the default `mock` is a momentum heuristic stand-in.
+Defaults are paper mode: `DRY_RUN=true`, empty `PRIVATE_KEY`, `MODEL=mock`. Real book and decisions, simulated fills, nothing signed. Live trading needs a non-empty `PRIVATE_KEY` with `DRY_RUN=false`. Set `MODEL=jev` and `TYPESAFE_AI_API_KEY` for Jev.
+
+Bit9 local setup: see [BIT9.md](./BIT9.md). Quick check: `bun run smoke`.
 
 ## Endpoints
 
