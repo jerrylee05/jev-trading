@@ -93,7 +93,12 @@ export function chooseBucket(span: number): { bucketMs: number; label: string } 
   return found ? best : fallback;
 }
 
-/** Group real mids into OHLC buckets. Missing buckets are omitted, not filled. */
+/** Floor a print onto a wall-clock bucket start (UTC ms). */
+export function candleBucketStart(ts: number, bucketMs: number): number {
+  return Math.floor(ts / bucketMs) * bucketMs;
+}
+
+/** Group real mids into OHLC buckets on absolute time. Missing buckets are omitted, not filled. */
 export function buildCandles(points: TimedPrice[], bucketMs: number): Candle[] {
   if (!points.length || bucketMs <= 0) return [];
   const sorted = points
@@ -101,11 +106,9 @@ export function buildCandles(points: TimedPrice[], bucketMs: number): Candle[] {
     .slice()
     .sort((a, b) => a.ts - b.ts);
   if (!sorted.length) return [];
-  const origin = sorted[0].ts;
   const out: Candle[] = [];
   for (const p of sorted) {
-    const idx = Math.floor((p.ts - origin) / bucketMs);
-    const t0 = origin + idx * bucketMs;
+    const t0 = candleBucketStart(p.ts, bucketMs);
     const last = out[out.length - 1];
     if (!last || last.t0 !== t0) {
       out.push({
@@ -125,6 +128,32 @@ export function buildCandles(points: TimedPrice[], bucketMs: number): Candle[] {
     }
   }
   return out;
+}
+
+/**
+ * Keep closed TF buckets immutable across ticks. Only the live/forming bucket
+ * (t0 === floor(now/bucketMs)*bucketMs) may change OHLC. Do not reshuffle history.
+ */
+export function mergeImmutableCandles(
+  prev: Candle[],
+  next: Candle[],
+  nowMs: number,
+  bucketMs: number,
+): Candle[] {
+  if (bucketMs <= 0) return next.slice();
+  const liveT0 = candleBucketStart(nowMs, bucketMs);
+  const byT0 = new Map<number, Candle>();
+  for (const c of prev) {
+    if (c.t0 < liveT0) byT0.set(c.t0, { ...c });
+  }
+  for (const c of next) {
+    if (c.t0 < liveT0) {
+      if (!byT0.has(c.t0)) byT0.set(c.t0, { ...c });
+    } else if (c.t0 === liveT0) {
+      byT0.set(c.t0, { ...c });
+    }
+  }
+  return [...byT0.values()].sort((a, b) => a.t0 - b.t0);
 }
 
 /** SMA-seeded EMA. Null until `period` samples exist. */

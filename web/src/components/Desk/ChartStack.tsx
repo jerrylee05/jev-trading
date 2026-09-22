@@ -13,6 +13,7 @@ import {
   formatWindow,
   isShortWindow,
   macd,
+  mergeImmutableCandles,
   rsi,
   spanMs,
   type Candle,
@@ -384,6 +385,9 @@ export default function ChartStack({ events, btc }: { events: BlockEvent[]; btc:
   const candle = useBox<HTMLDivElement>();
   const macdBox = useBox<HTMLDivElement>();
   const rsiBox = useBox<HTMLDivElement>();
+  /** Lock TF once chosen so closed candles are not rebuilt on a new bucket size. */
+  const lockedBucketMs = useRef<number | null>(null);
+  const frozenCandles = useRef<Candle[]>([]);
 
   const model = useMemo(() => {
     const points: TimedPrice[] = [];
@@ -391,8 +395,22 @@ export default function ChartStack({ events, btc }: { events: BlockEvent[]; btc:
       if (Number.isFinite(e.ts) && Number.isFinite(e.mid)) points.push({ ts: e.ts, mid: e.mid });
     }
     const span = spanMs(points);
-    const bucket = chooseBucket(span);
-    const candles = buildCandles(points, bucket.bucketMs);
+    const chosen = chooseBucket(span);
+    if (lockedBucketMs.current == null && points.length >= 8) {
+      lockedBucketMs.current = chosen.bucketMs;
+    }
+    const bucketMs = lockedBucketMs.current ?? chosen.bucketMs;
+    const bucketLabel =
+      chosen.bucketMs === bucketMs
+        ? chosen.label
+        : ({ 1000: "1s", 2000: "2s", 5000: "5s", 10000: "10s", 15000: "15s", 30000: "30s", 60000: "1m" } as Record<
+            number,
+            string
+          >)[bucketMs] ?? `${bucketMs / 1000}s`;
+    const rebuilt = buildCandles(points, bucketMs);
+    const nowMs = points.length ? points[points.length - 1].ts : Date.now();
+    const candles = mergeImmutableCandles(frozenCandles.current, rebuilt, nowMs, bucketMs);
+    frozenCandles.current = candles;
     const mids = points.map((p) => p.mid);
     const macdS = macd(mids);
     const rsiS = rsi(mids);
@@ -409,7 +427,7 @@ export default function ChartStack({ events, btc }: { events: BlockEvent[]; btc:
     return {
       points,
       span,
-      bucket,
+      bucket: { bucketMs, label: bucketLabel },
       candles,
       macdS,
       rsiS,

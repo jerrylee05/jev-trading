@@ -5,6 +5,7 @@ import {
   alignReference,
   buildCandles,
   chooseBucket,
+  mergeImmutableCandles,
   formatWindow,
   isShortWindow,
   macd,
@@ -84,4 +85,49 @@ test("BTC reference is stepped onto the paper window without extending past the 
     { t: 1_000, p: 7 },
     { t: 2_000, p: 7 },
   ]);
+});
+
+
+test("candles align to wall-clock buckets, not the first print", () => {
+  const candles = buildCandles(
+    [
+      { ts: 1_500, mid: 10 },
+      { ts: 1_800, mid: 12 },
+      { ts: 2_200, mid: 11 },
+    ],
+    1_000,
+  );
+  expect(candles.map((c) => c.t0)).toEqual([1_000, 2_000]);
+  expect(candles[0]).toMatchObject({ open: 10, high: 12, low: 10, close: 12, t1: 2_000 });
+});
+
+test("closed candles stay fixed when the feed window slides", () => {
+  const bucket = 1_000;
+  const first = buildCandles(
+    [
+      { ts: 1_000, mid: 10 },
+      { ts: 1_400, mid: 12 },
+      { ts: 2_100, mid: 11 },
+      { ts: 2_400, mid: 13 },
+    ],
+    bucket,
+  );
+  const closed = first.find((c) => c.t0 === 1_000)!;
+  expect(closed).toMatchObject({ open: 10, high: 12, low: 10, close: 12 });
+
+  // Window slides: drop early print, add a live print in the 3s bucket.
+  const rebuilt = buildCandles(
+    [
+      { ts: 1_400, mid: 12 },
+      { ts: 2_100, mid: 11 },
+      { ts: 2_400, mid: 13 },
+      { ts: 3_200, mid: 14 },
+    ],
+    bucket,
+  );
+  const merged = mergeImmutableCandles(first, rebuilt, 3_200, bucket);
+  const still = merged.find((c) => c.t0 === 1_000)!;
+  expect(still).toMatchObject({ open: 10, high: 12, low: 10, close: 12, n: 2 });
+  const live = merged.find((c) => c.t0 === 3_000)!;
+  expect(live.close).toBe(14);
 });
