@@ -26,20 +26,24 @@ No wallet key is required. Nothing is signed or sent on chain.
 
 ## Start dry-run (mock model)
 
-    bun run start
+Port `3000` is often taken on Bit9 (for example the jev-triage Next.js app). Pick another port:
+
+    PORT=3010 bun run start
 
 Expect a startup line containing `DRY RUN` and per-block logs with `(sim)` on quotes.
 
-Quick checks:
+Quick checks (use the same `PORT` you started with):
 
-    curl -s http://localhost:3000/ | jq '{dryRun, model, wallet, block: .latest.block}'
-    curl -N http://localhost:3000/events
+    curl -s http://localhost:3010/ | jq '{dryRun, model, wallet, block: .latest.block}'
+    curl -N http://localhost:3010/events
 
 Press Ctrl+C to stop.
 
-Optional automated smoke (starts the server, checks `/`, then exits):
+Optional automated smoke (picks a free high port such as 3010+, checks trader JSON, then exits):
 
     bun run smoke
+
+Smoke ignores `.env` `PORT` unless you pass `PORT=<n> bun run smoke`. It asserts `Content-Type: application/json` and `dryRun: true` so it does not confuse another app on `:3000` with the trader.
 
 ## Switch to real Jev (still dry-run)
 
@@ -87,4 +91,4 @@ The Next.js UI lives in `web/`. Point it at your local backend:
     bun install
     bun run dev
 
-Backend default port is `3000` (`PORT` in `.env`). Run the web app on another port if both run locally.
+Default backend port is `3000` (`PORT` in `.env`), but on Bit9 you will usually set `PORT=3010` (or another free port) because `:3000` is already in use. Point the web app at whatever port the trader uses, for example `NEXT_PUBLIC_API_URL=http://localhost:3010`.
