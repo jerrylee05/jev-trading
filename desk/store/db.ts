@@ -182,6 +182,51 @@ export function listWatchlist(): WatchlistRow[] {
     .all() as WatchlistRow[];
 }
 
+/** Newest stored bar for a symbol/timeframe, or null. */
+export function latestBar(symbol: string, tf: string): { t: number; c: number } | null {
+  const row = getDb()
+    .prepare(`SELECT t, c FROM bars WHERE symbol = ? AND tf = ? ORDER BY t DESC LIMIT 1`)
+    .get(symbol, tf) as { t: number; c: number } | undefined;
+  if (!row || !Number.isFinite(row.c) || !Number.isFinite(row.t)) return null;
+  return row;
+}
+
+/** Close of the newest bar strictly before `beforeMs`, or null. */
+export function closeBefore(symbol: string, tf: string, beforeMs: number): number | null {
+  const row = getDb()
+    .prepare(`SELECT c FROM bars WHERE symbol = ? AND tf = ? AND t < ? ORDER BY t DESC LIMIT 1`)
+    .get(symbol, tf, beforeMs) as { c: number } | undefined;
+  if (!row || !Number.isFinite(row.c)) return null;
+  return row.c;
+}
+
+/**
+ * Put `preferred` symbols first, in that order. Anything else keeps its
+ * relative order after them. Positions are rewritten 0..n-1.
+ */
+export function alignWatchlistOrder(preferred: string[]): void {
+  const rows = listWatchlist();
+  if (!rows.length) return;
+  const pref = preferred.map((s) => s.trim().toUpperCase()).filter(Boolean);
+  const rank = new Map(pref.map((s, i) => [s, i]));
+  const sorted = rows.slice().sort((a, b) => {
+    const ra = rank.get(a.symbol.toUpperCase());
+    const rb = rank.get(b.symbol.toUpperCase());
+    const aRank = ra ?? pref.length + a.position;
+    const bRank = rb ?? pref.length + b.position;
+    if (aRank !== bRank) return aRank - bRank;
+    if (a.added_at !== b.added_at) return a.added_at - b.added_at;
+    return a.symbol.localeCompare(b.symbol);
+  });
+  const update = getDb().prepare(`UPDATE watchlist SET position = ? WHERE symbol = ?`);
+  const tx = getDb().transaction(() => {
+    sorted.forEach((row, i) => {
+      if (row.position !== i) update.run(i, row.symbol);
+    });
+  });
+  tx();
+}
+
 export function watchlistCount(): number {
   const row = getDb().prepare(`SELECT COUNT(*) AS n FROM watchlist`).get() as { n: number };
   return row.n;

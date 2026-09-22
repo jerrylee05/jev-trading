@@ -7,10 +7,14 @@ import {
   queryBars,
   upsertBar,
   addWatchSymbol,
+  alignWatchlistOrder,
+  closeBefore,
+  latestBar,
   listWatchlist,
   removeWatchSymbol,
   getDb,
 } from "./db";
+import { DEFAULT_DESK_SYMBOLS } from "../config";
 
 const PATH = join(import.meta.dir, "..", "..", "data", "desk-test.sqlite");
 
@@ -81,5 +85,41 @@ describe("sqlite upsert", () => {
     expect(listWatchlist()).toHaveLength(1);
     expect(removeWatchSymbol("NVDA")).toBe(true);
     expect(listWatchlist()).toHaveLength(0);
+  });
+
+  test("alignWatchlistOrder puts DESK defaults first", () => {
+    expect([...DEFAULT_DESK_SYMBOLS]).toEqual(["NVDA", "TSLA", "QQQ", "SPY", "MSTR", "BTCUSD"]);
+    const scrambled = ["BTCUSD", "MSTR", "NVDA", "EXTRA", "SPY", "TSLA", "QQQ"];
+    scrambled.forEach((symbol, i) => {
+      addWatchSymbol({
+        symbol,
+        venue: "unresolved",
+        asset_class: symbol === "BTCUSD" ? "crypto" : "us_equity",
+        display: symbol,
+        position: i,
+        paused: 0,
+        added_at: 1_000 + i,
+      });
+    });
+    alignWatchlistOrder([...DEFAULT_DESK_SYMBOLS]);
+    expect(listWatchlist().map((r) => r.symbol)).toEqual([
+      "NVDA",
+      "TSLA",
+      "QQQ",
+      "SPY",
+      "MSTR",
+      "BTCUSD",
+      "EXTRA",
+    ]);
+    expect(listWatchlist().map((r) => r.position)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+  });
+
+  test("latestBar and closeBefore read the 1m series", () => {
+    const day = Date.UTC(2026, 0, 15, 5, 0, 0);
+    insertClosedBar("NVDA", "1m", { t: day - 60_000, o: 100, h: 100, l: 100, c: 100, v: 1, n: 1, src: "t" });
+    insertClosedBar("NVDA", "1m", { t: day + 60_000, o: 110, h: 112, l: 109, c: 111, v: 1, n: 1, src: "t" });
+    expect(latestBar("NVDA", "1m")?.c).toBe(111);
+    expect(closeBefore("NVDA", "1m", day)).toBe(100);
+    expect(closeBefore("NVDA", "1m", day - 120_000)).toBeNull();
   });
 });

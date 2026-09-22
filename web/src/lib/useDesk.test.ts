@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { barsToEvents, deskDecisionToUi, feedHint } from "./useDesk";
+import { applyBarToQuotes, barsToEvents, deskDecisionToUi, feedHint, quotesBySymbol } from "./useDesk";
 
 describe("useDesk helpers", () => {
   test("barsToEvents appends live bar and maps close to mid", () => {
@@ -64,5 +64,20 @@ describe("useDesk helpers", () => {
         0,
       ),
     ).toContain("Coinbase");
+  });
+
+  test("quotes keep prior close and ignore older prints", () => {
+    const base = quotesBySymbol([
+      { symbol: "NVDA", last: 100, prev: 90, chgPct: (100 - 90) / 90 * 100, asOf: 1_000 },
+    ]);
+    const next = applyBarToQuotes(base, "NVDA", { c: 110, t: 2_000 });
+    expect(next.NVDA!.last).toBe(110);
+    expect(next.NVDA!.prev).toBe(90);
+    expect(next.NVDA!.chgPct).toBeCloseTo(((110 - 90) / 90) * 100);
+    const stale = applyBarToQuotes(next, "NVDA", { c: 50, t: 500 });
+    expect(stale.NVDA!.last).toBe(110);
+    const bare = applyBarToQuotes({}, "TSLA", { c: 200, t: 5 });
+    expect(bare.TSLA!.last).toBe(200);
+    expect(bare.TSLA!.chgPct).toBeNull();
   });
 });
