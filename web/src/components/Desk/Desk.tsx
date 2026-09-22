@@ -1,10 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import ChartStack from "./ChartStack";
 import { COPY, buildDesk } from "@/lib/deskView";
 import type { FeedState } from "@/lib/types";
 import { useBtc } from "@/lib/useBtc";
+import {
+  decisionForSymbol,
+  deskDecisionToUi,
+  feedHint,
+  positionForSymbol,
+  useDesk,
+} from "@/lib/useDesk";
 import { useUptime } from "@/lib/useUptime";
 import styles from "./Desk.module.css";
 
@@ -28,18 +35,82 @@ function fmtCarried(ms: number | null): string | null {
   return `carried ${(ms / 60_000).toFixed(1)}m`;
 }
 
-export default function Desk({ feed, apiUrl }: { feed: FeedState; apiUrl: string }) {
+export default function Desk({
+  feed,
+  apiUrl,
+  deskUrl,
+}: {
+  feed: FeedState;
+  apiUrl: string;
+  deskUrl: string;
+}) {
   const [btcOn, setBtcOn] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [formErr, setFormErr] = useState<string | null>(null);
   const btc = useBtc(btcOn);
+  const desk = useDesk(deskUrl);
   const view = useMemo(
     () => buildDesk(feed.meta, feed.latest, feed.events, feed.connection, apiUrl),
     [feed.meta, feed.latest, feed.events, feed.connection, apiUrl],
   );
   const uptime = useUptime(feed.meta?.startedAt);
-  const paper = view.stripe === "PAPER";
-  const carried = fmtCarried(view.carriedAgeMs);
-  const showAction = view.late.text === "true" && view.carriedAction ? view.carriedAction : view.action;
-  const showTone = view.late.text === "true" && view.carriedAction ? "hold" : view.actionTone;
+  const paper = true;
+  const selected = desk.symbols.find((s) => s.symbol === desk.selected);
+  const deskDec = decisionForSymbol(desk.decisions, desk.selected);
+  const deskUi = deskDecisionToUi(deskDec);
+  const deskPos = positionForSymbol(desk.positions, desk.selected);
+  const hint = feedHint(selected, desk.status, desk.bars.length + (desk.live ? 1 : 0));
+  const chartEvents = desk.events.length ? desk.events : feed.events;
+  const usingDesk = desk.connection === "live" || desk.events.length > 0;
+  const showAction = usingDesk
+    ? deskUi?.action === "buy"
+      ? "LONG"
+      : deskUi?.action === "sell"
+        ? "SHORT"
+        : deskUi
+          ? "HOLD"
+          : "—"
+    : view.late.text === "true" && view.carriedAction
+      ? view.carriedAction
+      : view.action;
+  const showTone = usingDesk
+    ? deskUi?.action === "buy"
+      ? "long"
+      : deskUi?.action === "sell"
+        ? "short"
+        : deskUi
+          ? "hold"
+          : "empty"
+    : view.late.text === "true" && view.carriedAction
+      ? "hold"
+      : view.actionTone;
+  const carried = usingDesk
+    ? deskDec
+      ? fmtCarried(Date.now() - deskDec.t)
+      : null
+    : fmtCarried(view.carriedAgeMs);
+
+  async function onAdd(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setFormErr(null);
+    const res = await desk.addSymbol(draft);
+    setBusy(false);
+    if (!res.ok) {
+      setFormErr(res.error);
+      return;
+    }
+    setDraft("");
+  }
+
+  async function onRemove(symbol: string) {
+    setBusy(true);
+    setFormErr(null);
+    const res = await desk.removeSymbol(symbol);
+    setBusy(false);
+    if (!res.ok) setFormErr(res.error);
+  }
 
   return (
     <div className={styles.shell}>
@@ -47,7 +118,7 @@ export default function Desk({ feed, apiUrl }: { feed: FeedState; apiUrl: string
         <div className={styles.brand}>
           <span className={styles.title}>{COPY.title}</span>
           <span className={paper ? styles.paperPill : styles.livePill}>{view.stripe}</span>
-          <span className={styles.pair}>MON-USDC</span>
+          <span className={styles.pair}>{desk.selected ?? "MULTI"}</span>
         </div>
         <div className={styles.quoteStrip}>
           <span className={styles.last}>{view.mid}</span>
@@ -99,13 +170,73 @@ export default function Desk({ feed, apiUrl }: { feed: FeedState; apiUrl: string
             </div>
           </section>
 
-          <ChartStack events={feed.events} btc={btc} btcOn={btcOn} onToggleBtc={() => setBtcOn((v) => !v)} />
+          {hint ? <div className={styles.feedHint}>{hint}</div> : null}
+          <ChartStack events={chartEvents} btc={btc} btcOn={btcOn} onToggleBtc={() => setBtcOn((v) => !v)} />
         </main>
 
         <aside className={styles.rail}>
           <div className={styles.watchlist}>
             <div className={styles.railHead}>Watchlist</div>
-            <div className={styles.watchEmpty}>Empty · Phase 3</div>
+            {desk.symbols.length === 0 ? (
+              <div className={styles.watchEmpty}>
+                {desk.connection === "live" ? "Empty watchlist" : "Connecting to desk…"}
+              </div>
+            ) : (
+              <ul className={styles.watchRows}>
+                {desk.symbols.map((s) => {
+                  const dec = decisionForSymbol(desk.decisions, s.symbol);
+                  const active = s.symbol === desk.selected;
+                  const act =
+                    dec?.action === "long" || dec?.action === "buy"
+                      ? "L"
+                      : dec?.action === "short" || dec?.action === "sell"
+                        ? "S"
+                        : dec
+                          ? "H"
+                          : "·";
+                  return (
+                    <li key={s.symbol} className={styles.watchItem}>
+                      <button
+                        type="button"
+                        className={active ? styles.watchRowActive : styles.watchRow}
+                        onClick={() => desk.setSelected(s.symbol)}
+                      >
+                        <span className={styles.watchSym}>{s.symbol}</span>
+                        <span className={`${styles.watchAct} ${actionClass(
+                          act === "L" ? "long" : act === "S" ? "short" : act === "H" ? "hold" : "",
+                        )}`}>
+                          {act}
+                        </span>
+                        <span className={styles.watchVenue}>{s.venue}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.watchDel}
+                        aria-label={`Remove ${s.symbol}`}
+                        disabled={busy}
+                        onClick={() => void onRemove(s.symbol)}
+                      >
+                        ×
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            <form className={styles.watchAdd} onSubmit={(e) => void onAdd(e)}>
+              <input
+                className={styles.watchInput}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder="Add symbol"
+                aria-label="Add symbol"
+                disabled={busy}
+              />
+              <button type="submit" className={styles.watchAddBtn} disabled={busy || !draft.trim()}>
+                Add
+              </button>
+            </form>
+            {formErr ? <div className={styles.watchErr}>{formErr}</div> : null}
           </div>
           <div className={styles.symbolDetail}>
             <div className={styles.railHead}>Symbol detail</div>
@@ -160,14 +291,14 @@ export default function Desk({ feed, apiUrl }: { feed: FeedState; apiUrl: string
       <footer className={styles.statusBar}>
         <span className={styles.statusItem}>
           <span className={view.dot === "live" ? styles.dotLive : styles.dotWait} aria-hidden />
-          feed {view.connection}
+          desk {desk.connection}
         </span>
         <span className={styles.statusItem}>dryRun {paper ? "true" : "false"}</span>
         <span className={styles.statusItem}>{view.modelPill}</span>
         <span className={styles.statusItem}>latency {view.latency}</span>
         <span className={styles.statusItem}>uptime {uptime}</span>
-        <span className={styles.statusItem}>api {view.footerApi}</span>
-        <span className={styles.statusLock}>live locked</span>
+        <span className={styles.statusItem}>api {deskUrl.replace(/^https?:\/\//, "")}</span>
+        <span className={styles.statusLock}>paper only</span>
       </footer>
     </div>
   );

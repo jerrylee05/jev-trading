@@ -60,7 +60,7 @@ function rowToPublic(w: WatchlistRow) {
 function snapshot(rt: DeskRuntime) {
   return {
     startedAt: rt.startedAt,
-    phase: 2,
+    phase: 3,
     model: deskConfig.model,
     modelName: rt.model?.name ?? deskConfig.model,
     decisionTf: deskConfig.decisionTf,
@@ -102,7 +102,7 @@ export function startDeskServer(rt: DeskRuntime) {
       if (pathname === "/healthz") {
         return json({
           ok: true,
-          phase: 2,
+          phase: 3,
           port: deskConfig.port,
           startedAt: rt.startedAt,
           clients: hub.size,

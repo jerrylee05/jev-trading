@@ -32,7 +32,7 @@ let adapterStatus: Record<string, string> = {};
 
 function status() {
   return {
-    phase: 2,
+    phase: 3,
     adapters: Object.fromEntries(adapters.map((a) => [a.id, adapterStatus[a.id] ?? "idle"])),
     alpacaConfigured: alpacaConfigured(),
     watchlist: watchlistCount(),
