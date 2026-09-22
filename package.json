@@ -20,6 +20,7 @@
     "start": "bun run src/index.ts",
     "dev": "bun --watch run src/index.ts",
     "smoke": "bun run scripts/dry-run-smoke.ts",
-    "test": "bun test"
+    "test": "bun test",
+    "desk": "bun run desk/index.ts"
   }
 }
