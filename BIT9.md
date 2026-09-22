@@ -94,12 +94,12 @@ The startup banner prints `LIVE` with the wallet address when live mode is activ
 
 ## Optional dashboard
 
-The Next.js UI lives in `web/`. Point it at your local backend:
+The Next.js UI lives in `web/`. It is the look1-chart paper desk (candles, MACD, RSI, BTCUSD reference). It stays on PAPER and does not unlock live trading.
 
     cd web
     cp .env.example .env.local
-    # set NEXT_PUBLIC_API_URL=http://localhost:3000
+    # NEXT_PUBLIC_API_URL=http://127.0.0.1:3010
     bun install
     bun run dev
 
-Default backend port is `3000` (`PORT` in `.env`), but on Bit9 you will usually set `PORT=3010` (or another free port) because `:3000` is already in use. Point the web app at whatever port the trader uses, for example `NEXT_PUBLIC_API_URL=http://localhost:3010`.
+`bun run dev` listens on port 3001. Default backend port in `.env` is `3000`, but on Bit9 set `PORT=3010` because `:3000` is often taken. Point the desk at that same port. The chart only uses mids the trader still has in memory (about 1000 blocks). A window under 90s is labeled short. History is not invented.

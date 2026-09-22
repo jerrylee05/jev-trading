@@ -17,8 +17,8 @@ const plex = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "JoCoding Futures Desk",
-  description: "Paper desk for Jev decisions on the Kuru MON-USDC book. Dry run only.",
+  title: "JEV Decision PAPER",
+  description: "Paper desk for one Jev decision every Monad block. Live trading stays locked.",
 };
 
 export const viewport: Viewport = {

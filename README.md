@@ -8,37 +8,28 @@ One decision every Monad block. A TypeSafe Jev model watches the Kuru MON-USDC o
     bun install
     bun run start
 
-Defaults are paper mode: `DRY_RUN=true`, empty `PRIVATE_KEY`, `MODEL=mock`. Real book and decisions, simulated fills, nothing signed. Live trading needs a non-empty `PRIVATE_KEY` with `DRY_RUN=false`. Set `MODEL=jev` and `AI_GATEWAY_API_KEY` (or `TYPESAFE_AI_API_KEY`) for Jev. Do not set `DRY_RUN=false` unless a wallet is meant to trade. The desk never clears that guard.
+Defaults are paper mode: `DRY_RUN=true`, empty `PRIVATE_KEY`, `MODEL=mock`. Real book and decisions, simulated fills, nothing signed. Live trading needs a non-empty `PRIVATE_KEY` with `DRY_RUN=false`. Set `MODEL=jev` and `AI_GATEWAY_API_KEY` (or `TYPESAFE_AI_API_KEY`) for Jev.
 
 Bit9 local setup: see [BIT9.md](./BIT9.md). Quick check: `bun run smoke` (uses a free port; `:3000` may be busy).
 
-## JoCoding Futures Desk
+## Paper desk (look1-chart)
 
-Paper UI in `web/`. It reads the trader JSON and does not take a private key, send orders, or turn dry-run off.
+The Next app in `web/` is the paper dashboard. It does not place orders and it does not unlock live mode.
 
-Terminal A, trader on port 3010 (3000 stays free):
+```bash
+PORT=3010 DRY_RUN=true bun run start          # trader, this repo
+cd web && bun install && bun run dev          # desk on http://127.0.0.1:3001
+```
 
-    PORT=3010 DRY_RUN=true bun run start
-
-Terminal B, desk on port 3001:
-
-    cd web
-    bun install
-    bun run dev
-
-Open http://localhost:3001. The page streams `http://127.0.0.1:3010/events` (SSE: `snapshot`, `block`, `quote`, `fill`). `GET http://127.0.0.1:3010/` is the same dry-run snapshot. Override the API with `NEXT_PUBLIC_API_URL` if the trader is not on 3010.
-
-While `dryRun` is true the desk keeps the PAPER badge, the `dryRun=true` pill, and the model pill. Fields the snapshot does not have (score rows, the Noul checklist, a blocked-order counter) stay `N/A`.
+`web` reads `GET /` and `GET /events` from `NEXT_PUBLIC_API_URL` (default `http://127.0.0.1:3010`). Candles, MACD, and RSI are built in the browser from the paper mid window the trader already keeps (last 1000 blocks, about 5 minutes). That window is labeled on the chart. Under 90 seconds it says the feed is short. Nothing backfills older mids. BTCUSD is a public reference line (Coinbase, else Binance) and is not part of the MON trade. Book depth, account equity, and the score checklist are not in the feed, so those cells stay N/A.
 
 ## Endpoints
 
 Deployed (dry run, mock model): https://jev-trader-production.up.railway.app
 
-- `GET /` snapshot: model, wallet, dryRun, bankrollUsd, horizonBlocks, latest block event
+- `GET /` snapshot: model, wallet, dryRun, latest block event
 - `GET /history` last 1000 block events
 - `GET /events` SSE: `snapshot` on connect, then one `block` event per block, plus a `fill` event whenever a live order's receipt lands
-
-Each block event includes `levels`: top 5 bids and asks, best first, as `[price, size]`.
 
 Every event (see `src/trader.ts` for types):
 
