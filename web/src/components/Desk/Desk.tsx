@@ -111,33 +111,101 @@ export default function Desk({
       paperTone,
     };
   })();
-  const showAction = usingDesk
-    ? deskUi?.action === "buy"
-      ? "LONG"
-      : deskUi?.action === "sell"
-        ? "SHORT"
-        : deskUi
-          ? "HOLD"
-          : "—"
-    : view.late.text === "true" && view.carriedAction
+  // Unresolved / no desk bars: quiet decision strip (no MON orphan probs).
+  const deskQuiet = usingDesk && (desk.bars.length + (desk.live ? 1 : 0)) === 0;
+  const deskQty = deskPos?.qty ?? 0;
+  // Jerry "seconds" bar: owned desk position wins over stale decision / MON bleed.
+  const showAction = !usingDesk
+    ? view.late.text === "true" && view.carriedAction
       ? view.carriedAction
-      : view.action;
-  const showTone = usingDesk
-    ? deskUi?.action === "buy"
-      ? "long"
-      : deskUi?.action === "sell"
-        ? "short"
-        : deskUi
-          ? "hold"
-          : "empty"
-    : view.late.text === "true" && view.carriedAction
+      : view.action
+    : deskQuiet
+      ? "—"
+      : deskQty > 0
+        ? "LONG"
+        : deskQty < 0
+          ? "SHORT"
+          : deskUi?.action === "buy"
+            ? "LONG"
+            : deskUi?.action === "sell"
+              ? "SHORT"
+              : deskUi
+                ? "HOLD"
+                : "—";
+  const showTone = !usingDesk
+    ? view.late.text === "true" && view.carriedAction
       ? "hold"
-      : view.actionTone;
+      : view.actionTone
+    : deskQuiet
+      ? "empty"
+      : deskQty > 0
+        ? "long"
+        : deskQty < 0
+          ? "short"
+          : deskUi?.action === "buy"
+            ? "long"
+            : deskUi?.action === "sell"
+              ? "short"
+              : deskUi
+                ? "hold"
+                : "empty";
   const carried = usingDesk
-    ? deskDec
-      ? fmtCarried(Date.now() - deskDec.t)
-      : null
+    ? deskQuiet
+      ? null
+      : deskDec
+        ? fmtCarried(Date.now() - deskDec.t)
+        : null
     : fmtCarried(view.carriedAgeMs);
+  const stripConfidence = usingDesk
+    ? deskQuiet
+      ? "—"
+      : deskDec
+        ? `${(Math.max(deskDec.p_long, deskDec.p_short, deskDec.p_flat) * 100).toFixed(1)}%`
+        : "—"
+    : view.confidence;
+  const stripLatency = usingDesk
+    ? deskQuiet
+      ? "—"
+      : deskDec
+        ? `${Math.round(deskDec.latency_ms)}ms`
+        : "—"
+    : view.latency;
+  const stripBlock = usingDesk ? "—" : view.block;
+  const stripUpIn10 = usingDesk
+    ? deskQuiet
+      ? "—"
+      : deskDec
+        ? deskDec.p_long.toFixed(3)
+        : "—"
+    : view.upIn10;
+  const stripBars = usingDesk
+    ? deskQuiet || !deskDec
+      ? [
+          { name: "LONG", width: 0, label: "—", tone: "long" as const },
+          { name: "SHORT", width: 0, label: "—", tone: "short" as const },
+          { name: "HOLD", width: 0, label: "—", tone: "hold" as const },
+        ]
+      : [
+          {
+            name: "LONG",
+            width: Math.round(deskDec.p_long * 100),
+            label: `${(deskDec.p_long * 100).toFixed(0)}%`,
+            tone: "long" as const,
+          },
+          {
+            name: "SHORT",
+            width: Math.round(deskDec.p_short * 100),
+            label: `${(deskDec.p_short * 100).toFixed(0)}%`,
+            tone: "short" as const,
+          },
+          {
+            name: "HOLD",
+            width: Math.round(deskDec.p_flat * 100),
+            label: `${(deskDec.p_flat * 100).toFixed(0)}%`,
+            tone: "hold" as const,
+          },
+        ]
+    : view.bars;
 
   async function onAdd(e: FormEvent) {
     e.preventDefault();
@@ -190,23 +258,23 @@ export default function Desk({
             <div className={styles.decisionMeta}>
               <div>
                 <span className={styles.lbl}>confidence</span>
-                <span className={styles.val}>{view.confidence}</span>
+                <span className={styles.val}>{stripConfidence}</span>
               </div>
               <div>
                 <span className={styles.lbl}>latency</span>
-                <span className={styles.val}>{view.latency}</span>
+                <span className={styles.val}>{stripLatency}</span>
               </div>
               <div>
                 <span className={styles.lbl}>block</span>
-                <span className={styles.val}>{view.block}</span>
+                <span className={styles.val}>{stripBlock}</span>
               </div>
               <div>
                 <span className={styles.lbl}>upIn10</span>
-                <span className={styles.val}>{view.upIn10}</span>
+                <span className={styles.val}>{stripUpIn10}</span>
               </div>
             </div>
             <div className={styles.probBars}>
-              {view.bars.map((b) => (
+              {stripBars.map((b) => (
                 <div key={b.name} className={styles.probRow}>
                   <span className={styles.probName}>{b.name}</span>
                   <div className={styles.probTrack}>
