@@ -111,37 +111,40 @@ export default function Desk({
       paperTone,
     };
   })();
-  // One decision card for selected symbol only. Quiet when unresolved / no bars
+  // One model-call card for selected symbol only. Quiet when unresolved / no bars
   // or when that symbol has no desk decision (no MON orphan probs).
-  const deskQty = deskPos?.qty ?? 0;
   const hasDeskDec = Boolean(deskDec);
   const deskQuiet =
     usingDesk &&
     ((desk.bars.length + (desk.live ? 1 : 0)) === 0 || !hasDeskDec);
-  // COMMIT 13413da: action ↔ owned desk position (never MON, never contradicting card).
-  // Probs + latency come only from this symbol's desk decision (below).
+  // Option A (deco/Gandalf): hero = MODEL CALL from desk decision — may differ from
+  // POSITION without fighting. Never bare "DECISION LONG" over POSITION SHORT.
   const showAction = !usingDesk
     ? view.late.text === "true" && view.carriedAction
       ? view.carriedAction
       : view.action
     : deskQuiet
       ? "—"
-      : deskQty > 0
+      : deskUi?.action === "buy"
         ? "LONG"
-        : deskQty < 0
+        : deskUi?.action === "sell"
           ? "SHORT"
-          : "FLAT";
+          : deskUi
+            ? "FLAT"
+            : "—";
   const showTone = !usingDesk
     ? view.late.text === "true" && view.carriedAction
       ? "hold"
       : view.actionTone
     : deskQuiet
       ? "empty"
-      : deskQty > 0
+      : deskUi?.action === "buy"
         ? "long"
-        : deskQty < 0
+        : deskUi?.action === "sell"
           ? "short"
-          : "hold";
+          : deskUi
+            ? "hold"
+            : "empty";
   const carried = usingDesk
     ? deskQuiet
       ? null
@@ -255,7 +258,7 @@ export default function Desk({
         <main className={styles.main}>
           <section className={styles.decisionBar}>
             <div className={`${styles.decision} ${actionClass(showTone)}`}>
-              <span className={styles.decisionLabel}>Decision</span>
+              <span className={styles.decisionLabel}>Model call</span>
               <span className={styles.decisionAction}>{showAction}</span>
               <span className={styles.carried}>{carried || " "}</span>
             </div>

@@ -1,13 +1,13 @@
 {
-  "btcDecision": "SHORT",
-  "btcPos": "SHORT",
-  "btcConflict": false,
-  "btcOrphan": false,
-  "nvdaDecision": "—",
-  "nvdaOrphan": false,
+  "ms": 2701,
+  "hasModelCall": true,
+  "hasBareDecision": false,
+  "modelAction": "LONG",
+  "pos": "SHORT",
+  "fight": false,
   "nvdaQuiet": true,
-  "model": "MODEL=JEV",
+  "modelPill": "MODEL=JEV",
   "pass": true,
-  "snippetBtc": "Jev Desk (paper) PAPER BTCUSD 85,415 — — DRYRUN=TRUE MODEL=JEV DECISION SHORT carried 138.2m CONFIDENCE 100.0% LATENCY 21ms BLOCK — P_LONG 1.000 LONG 100% SHORT 0% FLAT 0% 1s 2s 5s 10s 15s 30s 1m Candles Bars EMA MACD RSI BTCUSD ref 1m · 499m O 85415.000000 H 85415.000000 L 85415.000000 C 85415.000000 -0.01% WATCHLIST BTCUSD ",
-  "snippetNvda": "Jev Desk (paper) PAPER NVDA — — — DRYRUN=TRUE MODEL=JEV DECISION — CONFIDENCE — LATENCY — BLOCK — P_LONG — LONG — SHORT — FLAT — No feed · Alpaca keys missing 1s 2s 5s 10s 15s 30s 1m Candles Bars EMA MACD RSI BTCUSD ref 1s · 0s · short window Waiting for paper mids from the trader feed. WATCHLIST BTCUSD L COINBASE × NVDA · "
+  "snippet": "Jev Desk (paper) PAPER BTCUSD 85,415 — — DRYRUN=TRUE MODEL=JEV MODEL CALL LONG carried 139.2m CONFIDENCE 100.0% LATENCY 21ms BLOCK — P_LONG 1.000 LONG 100% SHORT 0% FLAT 0% 1s 2s 5s 10s 15s 30s 1m Candles Bars EMA MACD RSI BTCUSD ref 1m · 499m O 85415.000000 H 85415.000000 L 85415.000000 C 85415.000000 -0.01% WATCHLIST BTCUSD L COINBASE × NVDA · UNRESOLVED × TSLA · UNRESOLVED × QQQ · UNRESOLVED",
+  "nvdaSnippet": "Jev Desk (paper) PAPER NVDA — — — DRYRUN=TRUE MODEL=JEV MODEL CALL — CONFIDENCE — LATENCY — BLOCK — P_LONG — LONG — SHORT — FLAT — No feed · Alpaca keys missing 1s 2s 5s 10s 15s 30s 1m Candles Bars EMA MACD RSI BTCUSD ref 1s · 0s · short window Waiting for paper mids from th"
 }
