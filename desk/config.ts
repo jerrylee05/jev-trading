@@ -30,7 +30,7 @@ function parseSymbols(raw: string | undefined): string[] {
     .filter(Boolean);
 }
 
-/** Jerry lock default order. DESK_SYMBOLS overrides this. Either list is inserted only when the watchlist table is empty. */
+/** Jerry lock default order. DESK_SYMBOLS overrides the empty-table insert. Boot rewrites positions to this order only when the saved set matches it exactly. */
 export const DEFAULT_DESK_SYMBOLS = ["NVDA", "TSLA", "QQQ", "SPY", "MSTR", "BTCUSD"] as const;
 
 export const deskConfig = {

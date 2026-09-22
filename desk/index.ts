@@ -6,7 +6,7 @@
 import { BarAggregator } from "./bars/aggregator";
 import { createAdapters, resolveSymbol } from "./adapters/registry";
 import type { SymbolRef } from "./adapters/types";
-import { deskConfig, alpacaConfigured } from "./config";
+import { deskConfig, alpacaConfigured, DEFAULT_DESK_SYMBOLS } from "./config";
 import { startDeskServer, maybeBackfill } from "./http/server";
 import { SseHub } from "./http/sse";
 import {
@@ -14,7 +14,7 @@ import {
   openDb,
   watchlistCount,
 } from "./store/db";
-import { seedEmptyWatchlist } from "./store/seed";
+import { alignDefaultWatchlistPositions, seedEmptyWatchlist } from "./store/seed";
 import { createPaperAndModel, startDecisionLoop } from "./engine/loop";
 import { resolveDeskModelName } from "./engine/model";
 
@@ -45,9 +45,14 @@ function status() {
 }
 
 async function seedWatchlist() {
-  // Empty table only. A saved watchlist is not rewritten and missing names are not filled back in.
+  // Empty table only. A saved watchlist is not wiped and missing names are not filled back in.
   const result = await seedEmptyWatchlist(deskConfig.symbols, (sym) => resolveSymbol(adapters, sym));
   if (result.added.length) console.log(`[desk] seeded ${result.added.length} watchlist symbol(s)`);
+  // Bit9 saved the default six out of order (BTCUSD at 0, equities stuck at 5).
+  // Rewrite positions only when the set is exactly DEFAULT_DESK_SYMBOLS.
+  if (alignDefaultWatchlistPositions(DEFAULT_DESK_SYMBOLS)) {
+    console.log(`[desk] watchlist positions aligned to ${DEFAULT_DESK_SYMBOLS.join(",")}`);
+  }
 }
 
 async function backfillAll() {

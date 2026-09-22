@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ChartStack from "./ChartStack";
 import { COPY, buildDesk } from "@/lib/deskView";
 import type { FeedState } from "@/lib/types";
@@ -45,9 +45,6 @@ export default function Desk({
   deskUrl: string;
 }) {
   const [btcOn, setBtcOn] = useState(false);
-  const [draft, setDraft] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [formErr, setFormErr] = useState<string | null>(null);
   const btc = useBtc(btcOn);
   const desk = useDesk(deskUrl);
   // BTC overlay is reference only — never leave it labeled as the selected series.
@@ -223,27 +220,6 @@ export default function Desk({
     paperSide !== "FLAT" &&
     showAction !== paperSide;
 
-  async function onAdd(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setFormErr(null);
-    const res = await desk.addSymbol(draft);
-    setBusy(false);
-    if (!res.ok) {
-      setFormErr(res.error);
-      return;
-    }
-    setDraft("");
-  }
-
-  async function onRemove(symbol: string) {
-    setBusy(true);
-    setFormErr(null);
-    const res = await desk.removeSymbol(symbol);
-    setBusy(false);
-    if (!res.ok) setFormErr(res.error);
-  }
-
   const deskModelRaw = (desk.status?.modelName || desk.status?.model || "mock").trim();
   const deskModelShort = /jev/i.test(deskModelRaw)
     ? deskModelRaw.toLowerCase().includes("jev") && !deskModelRaw.toLowerCase().startsWith("mock")
@@ -338,61 +314,32 @@ export default function Desk({
                 {desk.connection === "live" ? "Empty watchlist" : "Connecting to desk…"}
               </div>
             ) : (
+              <div className={styles.watchCols} aria-hidden>
+                <span>Symbol</span>
+                <span>Last</span>
+                <span>Chg%</span>
+              </div>
               <ul className={styles.watchRows}>
                 {desk.symbols.map((s) => {
-                  const dec = decisionForSymbol(desk.decisions, s.symbol);
                   const active = s.symbol === desk.selected;
-                  const act =
-                    dec?.action === "long" || dec?.action === "buy"
-                      ? "L"
-                      : dec?.action === "short" || dec?.action === "sell"
-                        ? "S"
-                        : dec
-                          ? "H"
-                          : "·";
                   return (
-                    <li key={s.symbol} className={styles.watchItem}>
+                    <li key={s.symbol}>
                       <button
                         type="button"
                         className={active ? styles.watchRowActive : styles.watchRow}
+                        data-symbol={s.symbol}
+                        aria-pressed={active}
                         onClick={() => desk.setSelected(s.symbol)}
                       >
                         <span className={styles.watchSym}>{s.symbol}</span>
-                        <span className={`${styles.watchAct} ${actionClass(
-                          act === "L" ? "long" : act === "S" ? "short" : act === "H" ? "hold" : "",
-                        )}`}>
-                          {act}
-                        </span>
-                        <span className={styles.watchVenue}>{s.venue}</span>
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.watchDel}
-                        aria-label={`Remove ${s.symbol}`}
-                        disabled={busy}
-                        onClick={() => void onRemove(s.symbol)}
-                      >
-                        ×
+                        <span className={styles.watchMissing}>-</span>
+                        <span className={styles.watchMissing}>-</span>
                       </button>
                     </li>
                   );
                 })}
               </ul>
             )}
-            <form className={styles.watchAdd} onSubmit={(e) => void onAdd(e)}>
-              <input
-                className={styles.watchInput}
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                placeholder="Add symbol"
-                aria-label="Add symbol"
-                disabled={busy}
-              />
-              <button type="submit" className={styles.watchAddBtn} disabled={busy || !draft.trim()}>
-                Add
-              </button>
-            </form>
-            {formErr ? <div className={styles.watchErr}>{formErr}</div> : null}
           </div>
           <div className={styles.symbolDetail}>
             <div className={styles.railHead}>Symbol detail</div>

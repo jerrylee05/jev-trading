@@ -1,5 +1,6 @@
 import type { SymbolRef } from "../adapters/types";
-import { addWatchSymbol, watchlistCount } from "./db";
+import { DEFAULT_DESK_SYMBOLS } from "../config";
+import { addWatchSymbol, listWatchlist, patchWatchSymbol, watchlistCount } from "./db";
 
 export type SeedResolveResult =
   | { ok: true; ref: Pick<SymbolRef, "symbol" | "venue" | "assetClass" | "display"> }
@@ -72,4 +73,34 @@ export async function seedEmptyWatchlist(
   }
 
   return { seeded: added.length > 0, added };
+}
+
+/** True when `rows` is exactly `expected`, ignoring order and position. */
+export function sameSymbolSet(rows: { symbol: string }[], expected: readonly string[]): boolean {
+  const want = expected.map((s) => s.trim().toUpperCase()).filter(Boolean);
+  if (rows.length !== want.length) return false;
+  const have = new Set(rows.map((r) => r.symbol.trim().toUpperCase()));
+  if (have.size !== want.length) return false;
+  return want.every((s) => have.has(s));
+}
+
+/**
+ * If the saved watchlist is exactly `order` (any positions), rewrite positions to 0..n-1.
+ * A different set is left alone. Already-correct positions are not written.
+ * Returns true only when at least one row was updated.
+ */
+export function alignDefaultWatchlistPositions(
+  order: readonly string[] = DEFAULT_DESK_SYMBOLS,
+): boolean {
+  const rows = listWatchlist();
+  if (!sameSymbolSet(rows, order)) return false;
+  const rank = new Map(order.map((s, i) => [s.trim().toUpperCase(), i]));
+  const pending = rows.filter((row) => rank.get(row.symbol.toUpperCase()) !== row.position);
+  if (pending.length === 0) return false;
+  for (const row of pending) {
+    const position = rank.get(row.symbol.toUpperCase());
+    if (position === undefined) continue;
+    patchWatchSymbol(row.symbol, { position });
+  }
+  return true;
 }
