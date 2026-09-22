@@ -30,12 +30,14 @@ test("candles use only real prints and skip empty buckets", () => {
 });
 
 test("bucket follows the observed span", () => {
-  expect(chooseBucket(300_000).label).toBe("10s");
-  expect(chooseBucket(60_000).label).toBe("2s");
-  expect(chooseBucket(5_000).label).toBe("1s");
-  expect(chooseBucket(0).label).toBe("1s");
-  // Long history (500x1m) exceeds 90-bar cap → coarse 1m, not fine 1s.
-  expect(chooseBucket(500 * 60_000).label).toBe("1m");
+  expect(chooseBucket(0).label).toBe("1m");
+  expect(chooseBucket(5_000).label).toBe("1m");
+  // ~40 bars of 1m → stay on 1m
+  expect(chooseBucket(40 * 60_000).label).toBe("1m");
+  // ~40 bars of 10m
+  expect(chooseBucket(40 * 600_000).label).toBe("10m");
+  // Long history exceeds 90×1m cap → coarser 10m+
+  expect(chooseBucket(500 * 60_000).label).toBe("10m");
 });
 
 test("short window is about a minute of paper mids", () => {

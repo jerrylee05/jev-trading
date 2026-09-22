@@ -32,14 +32,15 @@ import type { BlockEvent } from "@/lib/types";
 import type { BtcFeed } from "@/lib/useBtc";
 import styles from "./Desk.module.css";
 
+/** Jerry lock: primary TF strip (1M = calendar-approx month). */
 const TF_OPTIONS = [
-  { label: "1s", ms: 1_000 },
-  { label: "2s", ms: 2_000 },
-  { label: "5s", ms: 5_000 },
-  { label: "10s", ms: 10_000 },
-  { label: "15s", ms: 15_000 },
-  { label: "30s", ms: 30_000 },
   { label: "1m", ms: 60_000 },
+  { label: "10m", ms: 600_000 },
+  { label: "30m", ms: 1_800_000 },
+  { label: "1h", ms: 3_600_000 },
+  { label: "1d", ms: 86_400_000 },
+  { label: "1w", ms: 604_800_000 },
+  { label: "1M", ms: 2_592_000_000 },
 ] as const;
 
 const EMA_PERIODS = [10, 20, 50, 200] as const;
@@ -81,7 +82,7 @@ export default function ChartStack(props: ChartStackProps) {
   const btcKeyRef = useRef("");
 
   const [barStyle, setBarStyle] = useState<BarStyle>("candles");
-  const [tfMs, setTfMs] = useState<number | null>(null);
+  const [tfMs, setTfMs] = useState<number | null>(60_000);
   const [showEma, setShowEma] = useState(true);
   const [showMacd, setShowMacd] = useState(true);
   const [showRsi, setShowRsi] = useState(true);

@@ -39,13 +39,13 @@ export const MACD_SIGNAL = 9;
 export const MACD_MIN_POINTS = MACD_SLOW + MACD_SIGNAL - 1;
 
 const BUCKETS: { ms: number; label: string }[] = [
-  { ms: 1_000, label: "1s" },
-  { ms: 2_000, label: "2s" },
-  { ms: 5_000, label: "5s" },
-  { ms: 10_000, label: "10s" },
-  { ms: 15_000, label: "15s" },
-  { ms: 30_000, label: "30s" },
   { ms: 60_000, label: "1m" },
+  { ms: 600_000, label: "10m" },
+  { ms: 1_800_000, label: "30m" },
+  { ms: 3_600_000, label: "1h" },
+  { ms: 86_400_000, label: "1d" },
+  { ms: 604_800_000, label: "1w" },
+  { ms: 2_592_000_000, label: "1M" },
 ];
 
 export function spanMs(points: TimedPrice[]): number {
@@ -93,8 +93,8 @@ export function chooseBucket(span: number): { bucketMs: number; label: string } 
     }
   }
   if (found) return best;
-  // Short spans (every bucket < 8 bars) keep the fine 1s default.
-  // Only long spans that exceeded the 90-bar cap use coarse/1m fallback.
+  // Short spans (every bucket < 8 bars) keep the fine 1m default.
+  // Only long spans that exceeded the 90-bar cap use coarser fallback.
   if (!anyOverCap) return fallback;
   for (let i = BUCKETS.length - 1; i >= 0; i--) {
     const b = BUCKETS[i]!;
