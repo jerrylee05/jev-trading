@@ -277,43 +277,53 @@ export default function Desk({
       <div className={styles.body}>
         <main className={styles.main}>
           <section className={styles.decisionBar}>
-            <div className={`${styles.decision} ${actionClass(showTone)}`}>
-              <span className={styles.decisionLabel}>Recommend</span>
-              <span className={styles.decisionAction}>{showAction}</span>
-              {signalDiffers ? (
-                <span className={styles.signalNote}>≠ paper {paperSide}</span>
-              ) : null}
-              <span className={styles.carried}>{carried || " "}</span>
-            </div>
-            <div className={styles.decisionMeta}>
-              <div>
-                <span className={styles.lbl}>confidence</span>
-                <span className={styles.val}>{stripConfidence}</span>
+            {deskQuiet ? (
+              <div className={`${styles.decision} ${styles.actionEmpty} ${styles.decisionQuiet}`}>
+                <span className={styles.decisionLabel}>Recommend</span>
+                <span className={styles.decisionEmptyCopy}>No model call yet</span>
+                <span className={styles.decisionEmptyHint}>Waiting for equity decision</span>
               </div>
-              <div>
-                <span className={styles.lbl}>latency</span>
-                <span className={styles.val}>{stripLatency}</span>
-              </div>
-              <div>
-                <span className={styles.lbl}>block</span>
-                <span className={styles.val}>{stripBlock}</span>
-              </div>
-              <div>
-                <span className={styles.lbl}>{usingDesk ? "p_long" : "upIn10"}</span>
-                <span className={styles.val}>{stripUpIn10}</span>
-              </div>
-            </div>
-            <div className={styles.probBars}>
-              {stripBars.map((b) => (
-                <div key={b.name} className={styles.probRow}>
-                  <span className={styles.probName}>{b.name}</span>
-                  <div className={styles.probTrack}>
-                    <div className={`${styles.probFill} ${actionClass(b.tone)}`} style={{ width: `${b.width}%` }} />
-                  </div>
-                  <span className={styles.probPct}>{b.label}</span>
+            ) : (
+              <>
+                <div className={`${styles.decision} ${actionClass(showTone)}`}>
+                  <span className={styles.decisionLabel}>Recommend</span>
+                  <span className={styles.decisionAction}>{showAction}</span>
+                  {signalDiffers ? (
+                    <span className={styles.signalNote}>≠ paper {paperSide}</span>
+                  ) : null}
+                  <span className={styles.carried}>{carried || " "}</span>
                 </div>
-              ))}
-            </div>
+                <div className={styles.decisionMeta}>
+                  <div>
+                    <span className={styles.lbl}>confidence</span>
+                    <span className={styles.val}>{stripConfidence}</span>
+                  </div>
+                  <div>
+                    <span className={styles.lbl}>latency</span>
+                    <span className={styles.val}>{stripLatency}</span>
+                  </div>
+                  <div>
+                    <span className={styles.lbl}>block</span>
+                    <span className={styles.val}>{stripBlock}</span>
+                  </div>
+                  <div>
+                    <span className={styles.lbl}>{usingDesk ? "p_long" : "upIn10"}</span>
+                    <span className={styles.val}>{stripUpIn10}</span>
+                  </div>
+                </div>
+                <div className={styles.probBars}>
+                  {stripBars.map((b) => (
+                    <div key={b.name} className={styles.probRow}>
+                      <span className={styles.probName}>{b.name}</span>
+                      <div className={styles.probTrack}>
+                        <div className={`${styles.probFill} ${actionClass(b.tone)}`} style={{ width: `${b.width}%` }} />
+                      </div>
+                      <span className={styles.probPct}>{b.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </section>
 
           {hint ? <div className={styles.feedHint}>{hint}</div> : null}
