@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import ChartStack from "./ChartStack";
+import TvRefChart from "./TvRefChart";
 import { COPY, buildDesk } from "@/lib/deskView";
 import type { FeedState } from "@/lib/types";
 import { useBtc } from "@/lib/useBtc";
@@ -45,6 +46,7 @@ export default function Desk({
   deskUrl: string;
 }) {
   const [btcOn, setBtcOn] = useState(false);
+  const [chartMode, setChartMode] = useState<"desk" | "tv">("desk");
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [formErr, setFormErr] = useState<string | null>(null);
@@ -254,6 +256,26 @@ export default function Desk({
       : deskModelRaw.slice(0, 24);
   const modelPill = usingDesk ? `MODEL=${deskModelShort}` : view.modelPill;
   const modelIsJev = usingDesk ? /jev/i.test(deskModelRaw) && !/^mock$/i.test(deskModelRaw) : view.modelIsJev;
+  const chartSourceToggle = (
+    <div className={styles.tfGroup} role="group" aria-label="Chart source">
+      <button
+        type="button"
+        className={chartMode === "desk" ? styles.tfActive : styles.tfBtn}
+        aria-pressed={chartMode === "desk"}
+        onClick={() => setChartMode("desk")}
+      >
+        Desk (LWC)
+      </button>
+      <button
+        type="button"
+        className={chartMode === "tv" ? styles.tfActive : styles.tfBtn}
+        aria-pressed={chartMode === "tv"}
+        onClick={() => setChartMode("tv")}
+      >
+        TV ref
+      </button>
+    </div>
+  );
 
   return (
     <div className={styles.shell}>
@@ -327,7 +349,24 @@ export default function Desk({
           </section>
 
           {hint ? <div className={styles.feedHint}>{hint}</div> : null}
-          <ChartStack events={chartEvents} seriesKey={desk.selected ?? "feed"} symbol={desk.selected} btc={btc} btcOn={btcOn} onToggleBtc={() => setBtcOn((v) => !v)} />
+          {chartMode === "tv" ? (
+            <div className={styles.chartPane}>
+              <div className={styles.chartToolbar}>{chartSourceToggle}</div>
+              <div className={styles.chartPaneBody}>
+                <TvRefChart symbol={desk.selected} />
+              </div>
+            </div>
+          ) : (
+            <ChartStack
+              events={chartEvents}
+              seriesKey={desk.selected ?? "feed"}
+              symbol={desk.selected}
+              btc={btc}
+              btcOn={btcOn}
+              onToggleBtc={() => setBtcOn((v) => !v)}
+              sourceToggle={chartSourceToggle}
+            />
+          )}
         </main>
 
         <aside className={styles.rail}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   BarSeries,
   CandlestickSeries,
@@ -64,6 +64,8 @@ export interface ChartStackProps {
   btc: BtcFeed;
   btcOn: boolean;
   onToggleBtc: () => void;
+  /** Desk (LWC) vs TV ref. Rendered beside the BTC overlay control. */
+  sourceToggle?: ReactNode;
 }
 
 function toTime(ms: number): UTCTimestamp {
@@ -73,7 +75,7 @@ function toTime(ms: number): UTCTimestamp {
 }
 
 export default function ChartStack(props: ChartStackProps) {
-  const { events, seriesKey = "default", symbol = null, btc, btcOn, onToggleBtc } = props;
+  const { events, seriesKey = "default", symbol = null, btc, btcOn, onToggleBtc, sourceToggle = null } = props;
   const hostRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const priceRef = useRef<ISeriesApi<"Candlestick"> | ISeriesApi<"Bar"> | null>(null);
@@ -473,6 +475,7 @@ export default function ChartStack(props: ChartStackProps) {
   return (
     <div className={styles.chartStack}>
       <div className={styles.chartToolbar}>
+        {sourceToggle}
         <div className={styles.tfGroup} role="group" aria-label="Timeframe">
           {TF_OPTIONS.map((t) => (
             <button
