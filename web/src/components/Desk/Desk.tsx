@@ -111,36 +111,37 @@ export default function Desk({
       paperTone,
     };
   })();
-  // Unresolved / no desk bars: quiet decision strip (no MON orphan probs).
-  const deskQuiet = usingDesk && (desk.bars.length + (desk.live ? 1 : 0)) === 0;
-  // Jerry raise: paint model decision (action + probs + latency), not position.
-  // Position stays in SymbolDetail. Never fall back to MON when desk is primary.
+  // One decision card for selected symbol only. Quiet when unresolved / no bars
+  // or when that symbol has no desk decision (no MON orphan probs).
+  const deskQty = deskPos?.qty ?? 0;
+  const hasDeskDec = Boolean(deskDec);
+  const deskQuiet =
+    usingDesk &&
+    ((desk.bars.length + (desk.live ? 1 : 0)) === 0 || !hasDeskDec);
+  // COMMIT 13413da: action ↔ owned desk position (never MON, never contradicting card).
+  // Probs + latency come only from this symbol's desk decision (below).
   const showAction = !usingDesk
     ? view.late.text === "true" && view.carriedAction
       ? view.carriedAction
       : view.action
     : deskQuiet
       ? "—"
-      : deskUi?.action === "buy"
+      : deskQty > 0
         ? "LONG"
-        : deskUi?.action === "sell"
+        : deskQty < 0
           ? "SHORT"
-          : deskUi
-            ? "FLAT"
-            : "—";
+          : "FLAT";
   const showTone = !usingDesk
     ? view.late.text === "true" && view.carriedAction
       ? "hold"
       : view.actionTone
     : deskQuiet
       ? "empty"
-      : deskUi?.action === "buy"
+      : deskQty > 0
         ? "long"
-        : deskUi?.action === "sell"
+        : deskQty < 0
           ? "short"
-          : deskUi
-            ? "hold"
-            : "empty";
+          : "hold";
   const carried = usingDesk
     ? deskQuiet
       ? null
