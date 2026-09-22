@@ -47,28 +47,39 @@ Smoke ignores `.env` `PORT` unless you pass `PORT=<n> bun run smoke`. It asserts
 
 ## Switch to real Jev (still dry-run)
 
-Edit `.env`:
+Bun loads `.env` automatically. It does **not** load `.env.local`; this repo reads `.env.local` at startup (vars already set in the shell win). On Bit9, copy keys into `.env.local` or export them; never commit secrets.
+
+### Option A: Vercel AI Gateway (Bit9 default)
+
+If you already have `AI_GATEWAY_API_KEY` in `.env.local`:
+
+    MODEL=jev
+    AI_GATEWAY_API_KEY=<your gateway key>
+    DRY_RUN=true
+    PRIVATE_KEY=
+
+Model id defaults to `typesafe-ai/jev` (`JEV_GATEWAY_MODEL_ID`). Then `bun run start` again.
+
+### Option B: Direct TypeSafe API
 
     MODEL=jev
     TYPESAFE_AI_API_KEY=<your typesafe key>
     DRY_RUN=true
     PRIVATE_KEY=
 
-Then `bun run start` again. Model id defaults to `jev-latest` (`JEV_MODEL_ID`).
+Model id defaults to `jev-latest` (`JEV_MODEL_ID`).
 
 | Variable | Purpose |
 | --- | --- |
 | `MODEL` | `mock` (default) or `jev` |
+| `AI_GATEWAY_API_KEY` | Vercel AI Gateway key; preferred when set |
+| `JEV_GATEWAY_MODEL_ID` | Gateway evaluation model (default `typesafe-ai/jev`) |
 | `TYPESAFE_AI_API_KEY` | TypeSafe API key for `@ai-sdk/typesafe-ai` |
-| `JEV_MODEL_ID` | Evaluation model id (default `jev-latest`) |
+| `JEV_MODEL_ID` | TypeSafe evaluation model id (default `jev-latest`) |
 | `DRY_RUN` | `true` keeps paper mode even if a key is present |
 | `PRIVATE_KEY` | Leave empty for paper; required only for live |
 
-Never commit keys. Keep secrets in `.env` only.
-
-### Vercel AI Gateway
-
-This trader calls TypeSafe's evaluation API directly via `@ai-sdk/typesafe-ai`. It reads `TYPESAFE_AI_API_KEY`, not `AI_GATEWAY_API_KEY`. If you use Vercel AI Gateway with `typesafe-ai/jev` in other apps, you still need a TypeSafe key here unless the code is changed to route through Gateway.
+Never commit keys. Keep secrets in `.env` or `.env.local` only.
 
 ## Live trading (not for smoke tests)
 

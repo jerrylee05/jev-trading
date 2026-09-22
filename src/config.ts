@@ -1,6 +1,16 @@
+import { loadEnvLocal } from "./env";
+
+loadEnvLocal();
+
 const env = (key: string, fallback?: string) => process.env[key] ?? fallback;
 const num = (key: string) => (env(key) ? Number(env(key)) : undefined);
 const trimmed = (key: string) => env(key)?.trim() || undefined;
+
+const aiGatewayApiKey = trimmed("AI_GATEWAY_API_KEY");
+const typesafeAiApiKey = trimmed("TYPESAFE_AI_API_KEY");
+const jevModelId = env("JEV_MODEL_ID", "jev-latest")!;
+const jevGatewayModelId = env("JEV_GATEWAY_MODEL_ID", "typesafe-ai/jev")!;
+const jevBackend = aiGatewayApiKey ? ("gateway" as const) : typesafeAiApiKey ? ("typesafe" as const) : null;
 
 export const config = {
   rpcUrl: env("RPC_URL", "https://rpc.monad.xyz")!, // sends, receipts, nonce, gas estimation
@@ -30,7 +40,10 @@ export const config = {
   refreshBlocks: 200, // how often to refresh the fee estimate, margin balances and the vault check
   horizonBlocks: Number(env("HORIZON_BLOCKS", "100")), // the model is asked about the move over this many blocks (~30 s)
   model: env("MODEL", "mock") as "mock" | "jev",
-  jevModelId: env("JEV_MODEL_ID", "jev-latest")!,
+  jevBackend,
+  jevModelId,
+  jevGatewayModelId,
+  jevEvaluationModelId: jevBackend === "gateway" ? jevGatewayModelId : jevModelId,
   jevUsdPerMTok: 0.042,
   port: Number(env("PORT", "3000")),
   historySize: 1000,

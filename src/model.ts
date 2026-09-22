@@ -1,6 +1,11 @@
-import { experimental_evaluate } from "ai";
+import { experimental_evaluate, gateway } from "ai";
 import { typeSafeAi } from "@ai-sdk/typesafe-ai";
 import { config } from "./config";
+
+const createJevEvaluationModel = () =>
+  config.jevBackend === "gateway"
+    ? gateway.evaluationModel(config.jevEvaluationModelId)
+    : typeSafeAi.evaluationModel(config.jevEvaluationModelId);
 
 /** Models answer buy or sell. `hold` only appears on late blocks (no decision was made). */
 export type Action = "buy" | "sell" | "hold";
@@ -57,8 +62,8 @@ const QUESTIONS = {
 
 /** Real Jev via the AI SDK. Swap-in is the MODEL env var. */
 export class JevModel implements Model {
-  readonly name = config.jevModelId;
-  private model = typeSafeAi.evaluationModel(config.jevModelId);
+  readonly name = config.jevEvaluationModelId;
+  private model = createJevEvaluationModel();
 
   async decide(state: TradeState): Promise<Decision> {
     const t0 = performance.now();
