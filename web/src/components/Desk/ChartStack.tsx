@@ -52,6 +52,8 @@ export interface ChartStackProps {
   events: BlockEvent[];
   /** When this changes (selected symbol), force setData instead of update. */
   seriesKey?: string;
+  /** Selected ticker for price-series title / meta (not the BTC overlay). */
+  symbol?: string | null;
   btc: BtcFeed;
   btcOn: boolean;
   onToggleBtc: () => void;
@@ -64,7 +66,7 @@ function toTime(ms: number): UTCTimestamp {
 }
 
 export default function ChartStack(props: ChartStackProps) {
-  const { events, seriesKey = "default", btc, btcOn, onToggleBtc } = props;
+  const { events, seriesKey = "default", symbol = null, btc, btcOn, onToggleBtc } = props;
   const hostRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const priceRef = useRef<ISeriesApi<"Candlestick"> | ISeriesApi<"Bar"> | null>(null);
@@ -162,6 +164,8 @@ export default function ChartStack(props: ChartStackProps) {
         borderDownColor: "#ef5350",
         wickUpColor: "#26a69a",
         wickDownColor: "#ef5350",
+        title: symbol ?? seriesKey,
+        lastValueVisible: true,
       },
       0,
     );
@@ -216,7 +220,7 @@ export default function ChartStack(props: ChartStackProps) {
         priceScaleId: "btc",
         priceLineVisible: false,
         lastValueVisible: true,
-        title: "BTCUSD ref",
+        title: "BTC ref",
         visible: false,
       },
       0,
@@ -277,6 +281,11 @@ export default function ChartStack(props: ChartStackProps) {
   useEffect(() => {
     btcRef.current?.applyOptions({ visible: btcOn });
   }, [btcOn]);
+
+  useEffect(() => {
+    const title = symbol ?? seriesKey;
+    priceRef.current?.applyOptions({ title });
+  }, [symbol, seriesKey, barStyle]);
 
   useEffect(() => {
     try {
@@ -482,12 +491,12 @@ export default function ChartStack(props: ChartStackProps) {
           RSI
         </button>
         <button type="button" className={btcOn ? styles.toolActive : styles.toolBtn} onClick={onToggleBtc}>
-          BTCUSD ref
+          BTC ref
         </button>
-        <span className={styles.chartMeta}>
-          {bucketLabel} · {formatWindow(span)}
+                <span className={styles.chartMeta}>
+          {symbol ?? seriesKey} · {bucketLabel} · {formatWindow(span)}
           {short ? " · short window" : ""}
-          {btcOn ? " · BTCUSD ref on" : ""}
+          {btcOn ? " · BTC ref overlay" : ""}
         </span>
         {last ? (
           <span className={styles.chartOhlc}>

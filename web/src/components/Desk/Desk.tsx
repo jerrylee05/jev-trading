@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import ChartStack from "./ChartStack";
 import { COPY, buildDesk } from "@/lib/deskView";
 import type { FeedState } from "@/lib/types";
@@ -50,6 +50,11 @@ export default function Desk({
   const [formErr, setFormErr] = useState<string | null>(null);
   const btc = useBtc(btcOn);
   const desk = useDesk(deskUrl);
+  // BTC overlay is reference only — never leave it labeled as the selected series.
+  useEffect(() => {
+    const sel = (desk.selected ?? "").toUpperCase();
+    if (btcOn && sel && !sel.startsWith("BTC")) setBtcOn(false);
+  }, [desk.selected, btcOn]);
   const view = useMemo(
     () => buildDesk(feed.meta, feed.latest, feed.events, feed.connection, apiUrl),
     [feed.meta, feed.latest, feed.events, feed.connection, apiUrl],
@@ -312,7 +317,7 @@ export default function Desk({
           </section>
 
           {hint ? <div className={styles.feedHint}>{hint}</div> : null}
-          <ChartStack events={chartEvents} seriesKey={desk.selected ?? "feed"} btc={btc} btcOn={btcOn} onToggleBtc={() => setBtcOn((v) => !v)} />
+          <ChartStack events={chartEvents} seriesKey={desk.selected ?? "feed"} symbol={desk.selected} btc={btc} btcOn={btcOn} onToggleBtc={() => setBtcOn((v) => !v)} />
         </main>
 
         <aside className={styles.rail}>
