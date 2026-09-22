@@ -49,6 +49,8 @@ type BarStyle = "candles" | "bars";
 
 export interface ChartStackProps {
   events: BlockEvent[];
+  /** When this changes (selected symbol), force setData instead of update. */
+  seriesKey?: string;
   btc: BtcFeed;
   btcOn: boolean;
   onToggleBtc: () => void;
