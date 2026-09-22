@@ -1,0 +1,28 @@
+{
+  "ok": true,
+  "softPullPort": 3001,
+  "web_url": "http://127.0.0.1:3001/",
+  "nvdaClicked": true,
+  "btcClicked": true,
+  "nvda": {
+    "hasEmpty": true,
+    "bare": false,
+    "action": null,
+    "pair": "NVDA",
+    "rec": ""
+  },
+  "btc": {
+    "hasEmpty": false,
+    "bare": false,
+    "action": "LONG",
+    "pair": "BTCUSD",
+    "rec": ""
+  },
+  "vizGate": "NVDA/no-decision: Recommend shows muted 'No model call yet' (no confidence/latency/— dash strip); BTC/with-decision: LONG|SHORT|FLAT still shown",
+  "shots": {
+    "nvda": "docs/shots/recommend-empty-nvda.png",
+    "btc": "docs/shots/recommend-empty-btc.png",
+    "json": "docs/shots/recommend-empty-prove.json"
+  },
+  "pass": true
+}

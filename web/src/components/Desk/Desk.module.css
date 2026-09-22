@@ -187,6 +187,25 @@
 .actionHold { color: var(--muted); }
 .actionEmpty { color: var(--muted); }
 
+.decisionQuiet {
+  grid-column: 1 / -1;
+  justify-content: center;
+  min-height: 72px;
+}
+
+.decisionEmptyCopy {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+}
+
+.decisionEmptyHint {
+  font-size: 11px;
+  color: var(--muted);
+  opacity: 0.85;
+}
+
 .decisionMeta {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
