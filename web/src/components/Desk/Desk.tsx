@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ChartStack from "./ChartStack";
 import TvRefChart from "./TvRefChart";
 import { COPY, buildDesk } from "@/lib/deskView";
@@ -14,6 +14,7 @@ import {
   useDesk,
 } from "@/lib/useDesk";
 import { useUptime } from "@/lib/useUptime";
+import { chgTone, fmtChgPct, fmtLast } from "@/lib/watchlist";
 import styles from "./Desk.module.css";
 
 function moneyClass(tone: "up" | "dn" | "flat" | undefined): string {
@@ -47,9 +48,6 @@ export default function Desk({
 }) {
   const [btcOn, setBtcOn] = useState(false);
   const [chartMode, setChartMode] = useState<"desk" | "tv">("desk");
-  const [draft, setDraft] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [formErr, setFormErr] = useState<string | null>(null);
   const btc = useBtc(btcOn);
   const desk = useDesk(deskUrl);
   // BTC overlay is reference only — never leave it labeled as the selected series.
@@ -225,27 +223,6 @@ export default function Desk({
     paperSide !== "FLAT" &&
     showAction !== paperSide;
 
-  async function onAdd(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setFormErr(null);
-    const res = await desk.addSymbol(draft);
-    setBusy(false);
-    if (!res.ok) {
-      setFormErr(res.error);
-      return;
-    }
-    setDraft("");
-  }
-
-  async function onRemove(symbol: string) {
-    setBusy(true);
-    setFormErr(null);
-    const res = await desk.removeSymbol(symbol);
-    setBusy(false);
-    if (!res.ok) setFormErr(res.error);
-  }
-
   const deskModelRaw = (desk.status?.modelName || desk.status?.model || "mock").trim();
   const deskModelShort = /jev/i.test(deskModelRaw)
     ? deskModelRaw.toLowerCase().includes("jev") && !deskModelRaw.toLowerCase().startsWith("mock")
@@ -298,17 +275,21 @@ export default function Desk({
 
       <div className={styles.body}>
         <main className={styles.main}>
-          <section className={styles.decisionBar}>
+          <section className={styles.decisionBar} data-symbol={desk.selected ?? ""}>
             {deskQuiet ? (
               <div className={`${styles.decision} ${styles.actionEmpty} ${styles.decisionQuiet}`}>
-                <span className={styles.decisionLabel}>Recommend</span>
+                <span className={styles.decisionLabel}>
+                  Recommend{desk.selected ? ` ${desk.selected}` : ""}
+                </span>
                 <span className={styles.decisionEmptyCopy}>No model call yet</span>
                 <span className={styles.decisionEmptyHint}>Waiting for equity decision</span>
               </div>
             ) : (
               <>
                 <div className={`${styles.decision} ${actionClass(showTone)}`}>
-                  <span className={styles.decisionLabel}>Recommend</span>
+                  <span className={styles.decisionLabel}>
+                    Recommend{desk.selected ? ` ${desk.selected}` : ""}
+                  </span>
                   <span className={styles.decisionAction}>{showAction}</span>
                   {signalDiffers ? (
                     <span className={styles.signalNote}>≠ paper {paperSide}</span>
@@ -377,39 +358,50 @@ export default function Desk({
                 {desk.connection === "live" ? "Empty watchlist" : "Connecting to desk…"}
               </div>
             ) : (
-              <ul className={styles.watchRows}>
-                {desk.symbols.map((s) => {
-                  const dec = decisionForSymbol(desk.decisions, s.symbol);
-                  const active = s.symbol === desk.selected;
-                  const act =
-                    dec?.action === "long" || dec?.action === "buy"
-                      ? "L"
-                      : dec?.action === "short" || dec?.action === "sell"
-                        ? "S"
-                        : dec
-                          ? "H"
-                          : "·";
-                  return (
-                    <li key={s.symbol} className={styles.watchItem}>
-                      <button
-                        type="button"
-                        className={active ? styles.watchRowActive : styles.watchRow}
-                        onClick={() => desk.setSelected(s.symbol)}
-                      >
-                        <span className={styles.watchSym}>{s.symbol}</span>
-                        <span className={`${styles.watchAct} ${actionClass(
-                          act === "L" ? "long" : act === "S" ? "short" : act === "H" ? "hold" : "",
-                        )}`}>
-                          {act}
-                        </span>
-                        <span className={styles.watchVenue}>{s.venue}</span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+              <>
+                <div className={styles.watchCols} aria-hidden>
+                  <span>Symbol</span>
+                  <span>Last</span>
+                  <span>Chg%</span>
+                </div>
+                <ul className={styles.watchRows}>
+                  {desk.symbols.map((s) => {
+                    const active = s.symbol === desk.selected;
+                    const quote = desk.quotes[s.symbol];
+                    const selectedLast =
+                      s.symbol === desk.selected
+                        ? (desk.live?.c ?? (desk.bars.length ? desk.bars[desk.bars.length - 1]!.c : null))
+                        : null;
+                    const last = quote?.last ?? selectedLast;
+                    const chg = quote?.chgPct ?? null;
+                    const tone = chgTone(chg);
+                    return (
+                      <li key={s.symbol}>
+                        <button
+                          type="button"
+                          className={active ? styles.watchRowActive : styles.watchRow}
+                          data-symbol={s.symbol}
+                          aria-pressed={active}
+                          onClick={() => desk.setSelected(s.symbol)}
+                        >
+                          <span className={styles.watchSym}>{s.symbol}</span>
+                          <span className={last == null ? styles.watchMissing : styles.watchLast}>
+                            {fmtLast(last)}
+                          </span>
+                          <span
+                            className={`${styles.watchChg} ${
+                              chg == null ? styles.watchMissing : tone === "up" ? styles.up : tone === "dn" ? styles.dn : styles.flat
+                            }`}
+                          >
+                            {fmtChgPct(chg)}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
             )}
-            {/* Add/× hidden for 30m watchlist slice — Jerry lock */}
           </div>
           <div className={styles.symbolDetail}>
             <div className={styles.railHead}>Symbol detail</div>
