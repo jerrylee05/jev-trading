@@ -1,3 +1,7 @@
+## Desk UI
+
+Phase 0 paper desk: `cd web && bun run dev` (port 3001) against trader on 3010. See `web/README.md`.
+
 # jev-trader
 
 One decision every Monad block. A TypeSafe Jev model watches the Kuru MON-USDC order book and answers buy or sell every ~300 ms. Every block posts a real post-only limit order on that side, one tick inside the touch, replacing the last one. Fills happen when a taker hits it, so the bot earns the spread instead of paying it. A small server streams every block to the dashboard.

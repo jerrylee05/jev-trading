@@ -3,8 +3,8 @@ import type { BlockEvent, ConnectionState, Decision, Meta, Position } from "./ty
 
 /** Strings the desk renders that are not derived from the feed. */
 export const COPY = {
-  kicker: "JoCoding Futures Desk | Jev decision layer",
-  title: "JEV Decision",
+  kicker: "Jev Desk (paper)",
+  title: "Jev Desk (paper)",
   pair: "MON-USDC / Kuru",
   lastDecision: "Last decision",
   choiceTick: "Choice | tick",
@@ -128,6 +128,9 @@ export interface DeskModel {
   resting: string;
   footerApi: string;
   connection: ConnectionState;
+  /** Age of last real (non-late) decision; null if none or latest is fresh. */
+  carriedAgeMs: number | null;
+  carriedAction: string | null;
 }
 
 function finite(n: unknown): n is number {
@@ -242,7 +245,7 @@ function horizonLabel(blocks: number | undefined): string {
   return `${fmtInt(blocks)} blk (${fmtInt(sec)}s)`;
 }
 
-function notional(pos: Position | undefined, mid: number | undefined): number | null {
+function notional(pos: Position | undefined, mid: number | null | undefined): number | null {
   if (!pos || !finite(pos.size)) return null;
   if (pos.size === 0) return 0;
   const px = finite(pos.entryPrice) ? pos.entryPrice : finite(mid) ? mid : null;
@@ -258,14 +261,14 @@ function n(v: number): string {
 
 export function buildSpark(events: BlockEvent[], position: Position | null | undefined): SparkModel {
   const empty: SparkModel = { line: null, area: null, tone: "hold", marker: null, fills: [], entryY: null };
-  const stamped = events.filter((e) => finite(e.ts) && finite(e.mid));
+  const stamped = events.filter((e) => !e.decision?.late && finite(e.ts) && finite(e.mid));
   if (!stamped.length) return empty;
   const end = stamped.reduce((m, e) => (e.ts > m ? e.ts : m), stamped[0]!.ts);
   const start = end - WINDOW_MS;
   const bySec = new Map<number, { t: number; mid: number }>();
   for (const e of stamped) {
     if (e.ts < start || e.ts > end) continue;
-    bySec.set(Math.floor(e.ts / 1000), { t: e.ts, mid: e.mid });
+    bySec.set(Math.floor(e.ts / 1000), { t: e.ts, mid: e.mid as number });
   }
   const raw = [...bySec.values()].sort((a, b) => a.t - b.t);
   if (!raw.length) return empty;
@@ -391,6 +394,19 @@ export function buildDesk(meta: Meta | null, latest: BlockEvent | null, events: 
   const positionTone: "long" | "short" | "flat" = side === "long" ? "long" : side === "short" ? "short" : "flat";
   const notion = notional(pos, latest?.mid);
 
+  let carriedAgeMs: number | null = null;
+  let carriedAction: string | null = null;
+  if (decision?.late) {
+    for (let i = events.length - 1; i >= 0; i--) {
+      const d = events[i]?.decision;
+      if (d && !d.late) {
+        carriedAgeMs = latest && finite(latest.ts) && finite(events[i]!.ts) ? latest.ts - events[i]!.ts : null;
+        carriedAction = actionOf(d).word;
+        break;
+      }
+    }
+  }
+
   return {
     stripe: paper ? "PAPER" : "LIVE",
     banner: paper
@@ -441,5 +457,7 @@ export function buildDesk(meta: Meta | null, latest: BlockEvent | null, events: 
     resting: latest?.resting ? `${qty(latest.resting.bidMon)} / ${qty(latest.resting.askMon)}` : NA,
     footerApi: apiUrl,
     connection,
+    carriedAgeMs,
+    carriedAction,
   };
 }

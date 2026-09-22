@@ -19,6 +19,7 @@
   "scripts": {
     "start": "bun run src/index.ts",
     "dev": "bun --watch run src/index.ts",
-    "smoke": "bun run scripts/dry-run-smoke.ts"
+    "smoke": "bun run scripts/dry-run-smoke.ts",
+    "test": "bun test"
   }
 }

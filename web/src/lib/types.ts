@@ -10,7 +10,7 @@ export interface Totals { blocks: number; decisions: number; quotes: number; fil
 export interface BlockEvent {
   block: number;
   ts: number;
-  mid: number;
+  mid: number | null;
   bestBid: number;
   bestAsk: number;
   spreadBps: number;

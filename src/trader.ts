@@ -1,4 +1,5 @@
-import { appendFileSync, mkdirSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, renameSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { config } from "./config";
 import { Market, type Book, type Fill, type Quote, type QuoteResult, type Side } from "./market";
 import type { Action, Decision, Model, TradeState } from "./model";
@@ -7,7 +8,7 @@ import { TradeFeed, type MakerFill, type TradePrint } from "./trades";
 export interface BlockEvent {
   block: number;
   ts: number;
-  mid: number;
+  mid: number | null;
   bestBid: number;
   bestAsk: number;
   spreadBps: number;
@@ -275,7 +276,7 @@ export class Trader {
     t.pnlPct = (t.pnlUsd / config.bankrollUsd) * 100;
     const size = Math.abs(this.position.mon);
     const event: BlockEvent = {
-      block, ts: Date.now(), mid: book.mid, bestBid: book.bid, bestAsk: book.ask, spreadBps: round(book.spreadBps, 2),
+      block, ts: Date.now(), mid: late ? null : book.mid, bestBid: book.bid, bestAsk: book.ask, spreadBps: round(book.spreadBps, 2),
       decision: late
         ? { action: "hold", probabilities: { buy: 0, sell: 0, hold: 1 }, upIn10: 0.5, latencyMs: 0, late: true }
         : decision && { action: decision.action, probabilities: decision.probabilities, upIn10: decision.upIn10, latencyMs: Math.round(decision.latencyMs), late: false },
@@ -291,9 +292,40 @@ export class Trader {
     };
     this.history.push(event);
     if (this.history.length > config.historySize) this.history.shift();
-    appendFileSync("data/events.jsonl", JSON.stringify(event) + "\n");
+    appendEvent(event);
     this.onEvent(event, timing);
   }
+}
+
+
+/** Day key in America/Los_Angeles for events.jsonl rotation. */
+function ptDayKey(d = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+}
+
+function dayKeyFromMtime(ms: number): string {
+  return ptDayKey(new Date(ms));
+}
+
+const EVENTS_PATH = join("data", "events.jsonl");
+
+/** Append one event. If the file's mtime day (PT) is not today, rotate it first. */
+function appendEvent(event: BlockEvent) {
+  mkdirSync("data", { recursive: true });
+  if (existsSync(EVENTS_PATH)) {
+    const mtime = statSync(EVENTS_PATH).mtimeMs;
+    const fileDay = dayKeyFromMtime(mtime);
+    const today = ptDayKey();
+    if (fileDay !== today) {
+      renameSync(EVENTS_PATH, join("data", `events-${fileDay}.jsonl`));
+    }
+  }
+  appendFileSync(EVENTS_PATH, JSON.stringify(event) + "\n");
 }
 
 /** Several fills in one block become one: total size, size-weighted price, the side with more size. */

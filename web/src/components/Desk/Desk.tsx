@@ -1,283 +1,174 @@
-import {
-  COPY,
-  UNMAPPED_CHECKS,
-  UNMAPPED_SCORES,
-  buildDesk,
-  checklistHasFeed,
-  scoresHaveFeed,
-  type DeskModel,
-  type MoneyTone,
-  type SparkFill,
-  type SparkModel,
-} from "@/lib/deskView";
+"use client";
+
+import { useMemo, useState } from "react";
+import ChartStack from "./ChartStack";
+import { COPY, buildDesk } from "@/lib/deskView";
 import type { FeedState } from "@/lib/types";
+import { useBtc } from "@/lib/useBtc";
+import { useUptime } from "@/lib/useUptime";
 import styles from "./Desk.module.css";
 
-function toneClass(tone: MoneyTone | "amber" | undefined): string {
+function moneyClass(tone: "up" | "dn" | "flat" | undefined): string {
   if (tone === "up") return styles.up;
   if (tone === "dn") return styles.dn;
-  if (tone === "amber") return styles.amber;
   return styles.flat;
 }
 
-function Spark({ spark }: { spark: SparkModel }) {
-  const stroke = spark.tone === "short" ? "#ef4444" : spark.tone === "long" ? "#22c55e" : "#94a3b8";
-  return (
-    <div className={styles.spark}>
-      <span className={styles.sparkTag}>{COPY.chart}</span>
-      <svg viewBox="0 0 400 72" preserveAspectRatio="none" aria-hidden="true">
-        <defs>
-          <linearGradient id="deskSpark" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={stroke} stopOpacity={0.25} />
-            <stop offset="100%" stopColor={stroke} stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        {spark.entryY != null ? (
-          <line x1={0} y1={spark.entryY} x2={400} y2={spark.entryY} stroke="rgba(232,238,248,0.28)" strokeWidth={1} strokeDasharray="3 3" />
-        ) : null}
-        {spark.area ? <path d={spark.area} fill="url(#deskSpark)" /> : null}
-        {spark.line ? <path d={spark.line} fill="none" stroke={stroke} strokeWidth={1.5} /> : null}
-        {spark.fills.map((f, i) => (
-          <polygon key={i} points={triangle(f)} fill={f.tone === "short" ? "#ef4444" : "#22c55e"} />
-        ))}
-        {spark.marker ? <circle cx={spark.marker.x} cy={spark.marker.y} r={3.5} fill={stroke} /> : null}
-      </svg>
-      {spark.marker ? (
-        <span
-          className={spark.marker.tone === "short" ? styles.markerShort : styles.markerLong}
-          style={{
-            left: `${(spark.marker.x / 400) * 100}%`,
-            top: `${Math.min(64, Math.max(22, (spark.marker.y / 72) * 100))}%`,
-          }}
-        >
-          {spark.marker.label}
-        </span>
-      ) : null}
-    </div>
-  );
+function actionClass(tone: string): string {
+  if (tone === "long") return styles.actionLong;
+  if (tone === "short") return styles.actionShort;
+  if (tone === "hold") return styles.actionHold;
+  return styles.actionEmpty;
 }
 
-function triangle(f: SparkFill): string {
-  const { x, y } = f;
-  if (f.tone === "short") return `${x},${y + 4} ${x - 3.5},${y - 3} ${x + 3.5},${y - 3}`;
-  return `${x},${y - 4} ${x - 3.5},${y + 3} ${x + 3.5},${y + 3}`;
-}
-
-function DeskBody({ view }: { view: DeskModel }) {
-  const paper = view.stripe === "PAPER";
-  const posClass = view.positionTone === "long" ? styles.posLong : view.positionTone === "short" ? styles.posShort : styles.posFlat;
-  return (
-    <div className={styles.desk}>
-      <div className={paper ? styles.banner : `${styles.banner} ${styles.bannerLive}`}>
-        <div className={styles.bannerLeft}>
-          <span className={paper ? styles.stripe : `${styles.stripe} ${styles.stripeLive}`}>{view.stripe}</span>
-          <span>{view.banner}</span>
-        </div>
-        <div className={styles.bannerRight}>
-          <span className={`${styles.pill} ${styles.pillDry}`}>{view.dryRunPill}</span>
-          <span className={`${styles.pill} ${view.modelIsJev ? styles.pillJev : styles.pillModel}`}>{view.modelPill}</span>
-        </div>
-      </div>
-
-      <header className={styles.header}>
-        <div>
-          <div className={styles.kicker}>{COPY.kicker}</div>
-          <h1 className={styles.title}>
-            <span className={`${styles.dot} ${view.dot === "live" ? styles.dotLive : styles.dotWait}`} aria-hidden="true" />
-            {COPY.title}
-            <span className={styles.pair}>{COPY.pair}</span>
-          </h1>
-        </div>
-        <div className={styles.meta}>
-          <div className={styles.chip}>
-            <span className={styles.lbl}>{COPY.gateway}</span>
-            <span className={`${styles.chipVal} ${styles.cyan}`}>{view.gateway}</span>
-          </div>
-          <div className={styles.chip}>
-            <span className={styles.lbl}>{COPY.block}</span>
-            <span className={styles.chipVal}>{view.block}</span>
-          </div>
-          <div className={styles.chip}>
-            <span className={styles.lbl}>{COPY.paperPnl}</span>
-            <span className={`${styles.chipVal} ${toneClass(view.paperPnl.tone)}`}>{view.paperPnl.text}</span>
-          </div>
-          <div className={styles.chip}>
-            <span className={styles.lbl}>{COPY.account}</span>
-            <span className={styles.chipVal}>{view.account}</span>
-          </div>
-        </div>
-      </header>
-
-      <div className={styles.grid}>
-        <section className={`${styles.pane} ${styles.decision}`} data-tone={view.actionTone === "empty" ? "hold" : view.actionTone}>
-          <div className={styles.pt}>
-            <span>{COPY.lastDecision}</span>
-            <span className={styles.sub}>{COPY.choiceTick}</span>
-          </div>
-          <div className={styles.action} data-tone={view.actionTone}>{view.action}</div>
-          <div className={styles.confRow}>
-            <span className={styles.confPct}>{view.confidence}</span>
-            <span className={styles.confLbl}>{COPY.confidence}</span>
-            <span className={styles.lat}>
-              <span>{COPY.latency}</span> {view.latency}
-            </span>
-          </div>
-          <div className={styles.bars}>
-            {view.bars.map((bar) => (
-              <div className={styles.prob} key={bar.name}>
-                <span className={bar.tone === "long" ? styles.nameLong : bar.tone === "short" ? styles.nameShort : styles.name}>{bar.name}</span>
-                <div className={styles.track}>
-                  <div
-                    className={bar.tone === "long" ? styles.fillLong : bar.tone === "short" ? styles.fillShort : styles.fillHold}
-                    style={{ width: `${bar.width}%`, height: "100%", borderRadius: 4 }}
-                  />
-                </div>
-                <span className={styles.pct}>{bar.label}</span>
-              </div>
-            ))}
-          </div>
-          <div className={styles.decisionMeta}>
-            <div className={styles.dm}>
-              <span className={styles.lbl}>{COPY.quoteSide}</span>
-              <div className={`${styles.dmVal} ${view.quote.tone === "long" ? styles.up : view.quote.tone === "short" ? styles.dn : ""}`}>{view.quote.text}</div>
-            </div>
-            <div className={styles.dm}>
-              <span className={styles.lbl}>{COPY.horizon}</span>
-              <div className={styles.dmVal}>{view.horizon}</div>
-            </div>
-            <div className={styles.dm}>
-              <span className={styles.lbl}>{COPY.upIn10}</span>
-              <div className={styles.dmVal}>{view.upIn10}</div>
-            </div>
-            <div className={styles.dm}>
-              <span className={styles.lbl}>{COPY.late}</span>
-              <div className={`${styles.dmVal} ${toneClass(view.late.tone)}`}>{view.late.text}</div>
-            </div>
-          </div>
-        </section>
-
-        <div className={styles.center}>
-          <section className={`${styles.pane} ${styles.book}`}>
-            <div className={styles.bookHead}>
-              <div>
-                <div className={styles.pt}>
-                  <span>{COPY.liveBook}</span>
-                  <span className={styles.sub}>{view.bookSub}</span>
-                </div>
-                <div className={styles.mid}>{view.mid}</div>
-              </div>
-              <div>
-                <div className={styles.spread}>{view.spread}</div>
-                <div className={styles.spread}>{view.touch}</div>
-              </div>
-            </div>
-            <div className={styles.bookCols}>
-              <div className={`${styles.sideCol} ${styles.bid}`}>
-                <h4>{COPY.bids}</h4>
-                {view.bids.map((row, i) => (
-                  <div key={`b${i}`} className={`${styles.lvl} ${row.empty ? styles.lvlEmpty : styles.lvlBid}`}>
-                    <span className={styles.px}>{row.price}</span>
-                    <span className={styles.sz}>{row.size}</span>
-                  </div>
-                ))}
-              </div>
-              <div className={`${styles.sideCol} ${styles.ask}`}>
-                <h4>{COPY.asks}</h4>
-                {view.asks.map((row, i) => (
-                  <div key={`a${i}`} className={`${styles.lvl} ${row.empty ? styles.lvlEmpty : styles.lvlAsk}`}>
-                    <span className={styles.px}>{row.price}</span>
-                    <span className={styles.sz}>{row.size}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <Spark spark={view.spark} />
-          </section>
-          <div className={styles.stats}>
-            <div className={styles.stat}>
-              <div className={styles.lbl}>{COPY.blocks}</div>
-              <div className={styles.statVal}>{view.stats.blocks}</div>
-            </div>
-            <div className={styles.stat}>
-              <div className={styles.lbl}>{COPY.decisions}</div>
-              <div className={styles.statVal}>{view.stats.decisions}</div>
-            </div>
-            <div className={styles.stat}>
-              <div className={styles.lbl}>{view.stats.fillsLabel}</div>
-              <div className={`${styles.statVal} ${view.stats.fillsAmber ? styles.amber : ""}`}>{view.stats.fills}</div>
-            </div>
-            <div className={styles.stat} title="Blocked is not a totals field. Late is lateBlocks.">
-              <div className={styles.lbl}>{COPY.blockedLate}</div>
-              <div className={styles.statVal}>{view.stats.blockedLate}</div>
-            </div>
-          </div>
-        </div>
-
-        <div className={styles.right}>
-          <section className={styles.pane}>
-            <div className={styles.pt}>
-              <span>{COPY.position}</span>
-              <span className={`${styles.posSide} ${posClass}`}>{view.positionSide}</span>
-            </div>
-            <div className={styles.kv}><span className={styles.k}>{COPY.size}</span><span className={styles.v}>{view.size}</span></div>
-            <div className={styles.kv}><span className={styles.k}>{COPY.entry}</span><span className={styles.v}>{view.entry}</span></div>
-            <div className={styles.kv}><span className={styles.k}>{COPY.notional}</span><span className={styles.v}>{view.notional}</span></div>
-            <div className={styles.kv}><span className={styles.k}>{COPY.unrealized}</span><span className={toneClass(view.unrealized.tone)}>{view.unrealized.text}</span></div>
-            <div className={styles.kv}><span className={styles.k}>{COPY.resting}</span><span className={styles.v}>{view.resting}</span></div>
-          </section>
-          <section className={styles.pane} title="Momentum, retrace risk, and book pressure are not in the trader status.">
-            <div className={`${styles.pt} ${styles.tight}`}>
-              <span>{COPY.scores}</span>
-              <span className={styles.sub}>{COPY.parallel}</span>
-            </div>
-            {scoresHaveFeed() ? (
-              UNMAPPED_SCORES.map((row) => (
-                <div className={styles.scoreRow} key={row.label}>
-                  <span>{row.label}</span>
-                  <div className={styles.scoreBar}><i /></div>
-                  <span className={styles.scoreVal}>{row.value}</span>
-                </div>
-              ))
-            ) : (
-              <p className={styles.awaitingFeed}>{COPY.awaitingFeed}</p>
-            )}
-          </section>
-          <section className={`${styles.pane} ${styles.grow}`} title="Noul checklist is not in the trader status.">
-            <div className={styles.pt}>
-              <span>{COPY.checklist}</span>
-              <span className={styles.sub}>{COPY.gate}</span>
-            </div>
-            {checklistHasFeed() ? (
-              <div className={styles.noul}>
-                {UNMAPPED_CHECKS.map((row) => (
-                  <div className={styles.noulItem} key={row.label}>
-                    <span className={styles.noulDot} />
-                    <span className={styles.noulLab}>{row.label}</span>
-                    <span className={styles.noulAns}>{row.answer}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className={styles.awaitingFeed}>{COPY.awaitingFeed}</p>
-            )}
-          </section>
-        </div>
-      </div>
-
-      <footer className={styles.footer}>
-        <div>
-          JoCoding Futures Desk | overlays <code>GET {view.footerApi}</code> dry-run JSON | {view.connection}
-        </div>
-        <div className={styles.footerRight}>
-          <span className={paper ? styles.badge : `${styles.badge} ${styles.badgeLive}`}>{view.stripe}</span>
-          <span>{COPY.unlock}</span>
-        </div>
-      </footer>
-    </div>
-  );
+function fmtCarried(ms: number | null): string | null {
+  if (ms == null || !Number.isFinite(ms) || ms < 0) return null;
+  if (ms < 1000) return `carried ${(ms / 1000).toFixed(1)}s`;
+  if (ms < 60_000) return `carried ${(ms / 1000).toFixed(1)}s`;
+  return `carried ${(ms / 60_000).toFixed(1)}m`;
 }
 
 export default function Desk({ feed, apiUrl }: { feed: FeedState; apiUrl: string }) {
-  const view = buildDesk(feed.meta, feed.latest, feed.events, feed.connection, apiUrl);
-  return <DeskBody view={view} />;
+  const [btcOn, setBtcOn] = useState(false);
+  const btc = useBtc(btcOn);
+  const view = useMemo(
+    () => buildDesk(feed.meta, feed.latest, feed.events, feed.connection, apiUrl),
+    [feed.meta, feed.latest, feed.events, feed.connection, apiUrl],
+  );
+  const uptime = useUptime(feed.meta?.startedAt);
+  const paper = view.stripe === "PAPER";
+  const carried = fmtCarried(view.carriedAgeMs);
+  const showAction = view.late.text === "true" && view.carriedAction ? view.carriedAction : view.action;
+  const showTone = view.late.text === "true" && view.carriedAction ? "hold" : view.actionTone;
+
+  return (
+    <div className={styles.shell}>
+      <header className={styles.topBar}>
+        <div className={styles.brand}>
+          <span className={styles.title}>{COPY.title}</span>
+          <span className={paper ? styles.paperPill : styles.livePill}>{view.stripe}</span>
+          <span className={styles.pair}>MON-USDC</span>
+        </div>
+        <div className={styles.quoteStrip}>
+          <span className={styles.last}>{view.mid}</span>
+          <span className={styles.muted}>{view.spread}</span>
+          <span className={styles.muted}>{view.touch}</span>
+        </div>
+        <div className={styles.topPills}>
+          <span className={styles.pill}>{view.dryRunPill}</span>
+          <span className={view.modelIsJev ? styles.pillJev : styles.pill}>{view.modelPill}</span>
+        </div>
+      </header>
+
+      <div className={styles.body}>
+        <main className={styles.main}>
+          <section className={styles.decisionBar}>
+            <div className={`${styles.decision} ${actionClass(showTone)}`}>
+              <span className={styles.decisionLabel}>Decision</span>
+              <span className={styles.decisionAction}>{showAction}</span>
+              {carried ? <span className={styles.carried}>{carried}</span> : null}
+            </div>
+            <div className={styles.decisionMeta}>
+              <div>
+                <span className={styles.lbl}>confidence</span>
+                <span className={styles.val}>{view.confidence}</span>
+              </div>
+              <div>
+                <span className={styles.lbl}>latency</span>
+                <span className={styles.val}>{view.latency}</span>
+              </div>
+              <div>
+                <span className={styles.lbl}>block</span>
+                <span className={styles.val}>{view.block}</span>
+              </div>
+              <div>
+                <span className={styles.lbl}>upIn10</span>
+                <span className={styles.val}>{view.upIn10}</span>
+              </div>
+            </div>
+            <div className={styles.probBars}>
+              {view.bars.map((b) => (
+                <div key={b.name} className={styles.probRow}>
+                  <span className={styles.probName}>{b.name}</span>
+                  <div className={styles.probTrack}>
+                    <div className={`${styles.probFill} ${actionClass(b.tone)}`} style={{ width: `${b.width}%` }} />
+                  </div>
+                  <span className={styles.probPct}>{b.label}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <ChartStack events={feed.events} btc={btc} btcOn={btcOn} onToggleBtc={() => setBtcOn((v) => !v)} />
+        </main>
+
+        <aside className={styles.rail}>
+          <div className={styles.watchlist}>
+            <div className={styles.railHead}>Watchlist</div>
+            <div className={styles.watchEmpty}>Empty · Phase 3</div>
+          </div>
+          <div className={styles.symbolDetail}>
+            <div className={styles.railHead}>Symbol detail</div>
+            <dl className={styles.detailGrid}>
+              <div>
+                <dt>Position</dt>
+                <dd className={view.positionTone === "long" ? styles.up : view.positionTone === "short" ? styles.dn : undefined}>
+                  {view.positionSide}
+                </dd>
+              </div>
+              <div>
+                <dt>Size</dt>
+                <dd>{view.size}</dd>
+              </div>
+              <div>
+                <dt>Entry</dt>
+                <dd>{view.entry}</dd>
+              </div>
+              <div>
+                <dt>Notional</dt>
+                <dd>{view.notional}</dd>
+              </div>
+              <div>
+                <dt>Unrealized</dt>
+                <dd className={moneyClass(view.unrealized.tone)}>{view.unrealized.text}</dd>
+              </div>
+              <div>
+                <dt>Paper PnL</dt>
+                <dd className={moneyClass(view.paperPnl.tone)}>{view.paperPnl.text}</dd>
+              </div>
+              <div>
+                <dt>Resting</dt>
+                <dd>{view.resting}</dd>
+              </div>
+              <div>
+                <dt>Quote</dt>
+                <dd>{view.quote.text}</dd>
+              </div>
+              <div>
+                <dt>Fills</dt>
+                <dd>{view.stats.fills}</dd>
+              </div>
+              <div>
+                <dt>Late blocks</dt>
+                <dd>{view.stats.blockedLate}</dd>
+              </div>
+            </dl>
+          </div>
+        </aside>
+      </div>
+
+      <footer className={styles.statusBar}>
+        <span className={styles.statusItem}>
+          <span className={view.dot === "live" ? styles.dotLive : styles.dotWait} aria-hidden />
+          feed {view.connection}
+        </span>
+        <span className={styles.statusItem}>dryRun {paper ? "true" : "false"}</span>
+        <span className={styles.statusItem}>{view.modelPill}</span>
+        <span className={styles.statusItem}>latency {view.latency}</span>
+        <span className={styles.statusItem}>uptime {uptime}</span>
+        <span className={styles.statusItem}>api {view.footerApi}</span>
+        <span className={styles.statusLock}>live locked</span>
+      </footer>
+    </div>
+  );
 }

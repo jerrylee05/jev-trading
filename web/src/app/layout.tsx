@@ -17,14 +17,14 @@ const plex = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "JoCoding Futures Desk",
-  description: "Paper desk for Jev decisions on the Kuru MON-USDC book. Dry run only.",
+  title: "Jev Desk (paper)",
+  description: "Jev Desk (paper). Single-symbol MON-USDC dry-run shell.",
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#07090e",
+  themeColor: "#131722",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
