@@ -55,11 +55,13 @@ export interface ChartStackProps {
 }
 
 function toTime(ms: number): UTCTimestamp {
-  return Math.floor(ms / 1000) as UTCTimestamp;
+  const n = typeof ms === "number" ? ms : Number(ms);
+  const msN = Number.isFinite(n) ? (n < 1_000_000_000_000 ? n * 1000 : n) : Date.now();
+  return Math.floor(msN / 1000) as UTCTimestamp;
 }
 
 export default function ChartStack(props: ChartStackProps) {
-  const { events, btc, btcOn, onToggleBtc } = props;
+  const { events, seriesKey = "default", btc, btcOn, onToggleBtc } = props;
   const hostRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const priceRef = useRef<ISeriesApi<"Candlestick"> | ISeriesApi<"Bar"> | null>(null);
@@ -254,21 +256,39 @@ export default function ChartStack(props: ChartStackProps) {
   }, [btcOn]);
 
   useEffect(() => {
+    try {
     const price = priceRef.current;
     if (!price) return;
-    const key = `${bucketMs}:${barStyle}`;
+    const key = `${seriesKey}:${bucketMs}:${barStyle}`;
     const reset = dataKeyRef.current !== key;
     dataKeyRef.current = key;
+    if (reset) {
+      frozenRef.current = [];
+      scaleLockedRef.current = false;
+      btcKeyRef.current = "";
+    }
 
-    const ohlc = candles.map((c) => ({
-      time: toTime(c.t0),
-      open: c.open,
-      high: c.high,
-      low: c.low,
-      close: c.close,
-    }));
-    if (reset) price.setData(ohlc);
-    else if (ohlc.length) price.update(ohlc[ohlc.length - 1]!);
+    const ohlc = candles
+      .filter((c) => Number.isFinite(c.t0) && Number.isFinite(c.open) && Number.isFinite(c.close))
+      .map((c) => ({
+        time: Number(toTime(c.t0)) as UTCTimestamp,
+        open: Number(c.open),
+        high: Number(c.high),
+        low: Number(c.low),
+        close: Number(c.close),
+      }));
+    try {
+      if (reset) price.setData(ohlc);
+      else if (ohlc.length) price.update(ohlc[ohlc.length - 1]!);
+    } catch (err) {
+      // Recover from LWC time-order glitches without blanking the desk shell.
+      console.warn("[ChartStack] price set/update failed; resetting series", err);
+      try {
+        price.setData(ohlc);
+      } catch (err2) {
+        console.warn("[ChartStack] price reset failed", err2);
+      }
+    }
 
     for (let i = 0; i < EMA_PERIODS.length; i++) {
       const series = emaRefs.current[i];
@@ -370,7 +390,10 @@ export default function ChartStack(props: ChartStackProps) {
       }
       scaleLockedRef.current = true;
     }
-  }, [candles, emaSeries, macdSeries, rsiSeries, closes.length, bucketMs, barStyle, btc, btcOn, nowMs]);
+    } catch (err) {
+      console.warn("[ChartStack] data effect failed", err);
+    }
+  }, [candles, emaSeries, macdSeries, rsiSeries, closes.length, bucketMs, barStyle, btc, btcOn, nowMs, seriesKey]);
 
   function pickTf(ms: number) {
     setTfMs(ms);

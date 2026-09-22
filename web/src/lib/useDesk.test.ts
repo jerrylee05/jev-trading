@@ -4,13 +4,16 @@ import { barsToEvents, deskDecisionToUi, feedHint } from "./useDesk";
 describe("useDesk helpers", () => {
   test("barsToEvents appends live bar and maps close to mid", () => {
     const events = barsToEvents(
-      [{ t: 1_000, o: 1, h: 2, l: 0.5, c: 1.5, v: 10 }],
-      { t: 2_000, o: 1.5, h: 2.5, l: 1.4, c: 2.2, v: 3 },
+      [{ t: 1_700_000_000_000, o: 1, h: 2, l: 0.5, c: 1.5, v: 10 }],
+      { t: 1_700_000_060_000, o: 1.5, h: 2.5, l: 1.4, c: 2.2, v: 3 },
     );
     expect(events).toHaveLength(2);
     expect(events[0]!.mid).toBe(1.5);
     expect(events[1]!.mid).toBe(2.2);
-    expect(events[1]!.ts).toBe(2_000);
+    expect(events[1]!.ts).toBe(1_700_000_060_000);
+    // seconds epoch is promoted to ms
+    const sec = barsToEvents([{ t: 1_700_000_000, o: 1, h: 1, l: 1, c: 1, v: 1 }], null);
+    expect(sec[0]!.ts).toBe(1_700_000_000_000);
   });
 
   test("deskDecisionToUi maps long/short/flat", () => {

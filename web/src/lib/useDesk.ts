@@ -90,23 +90,32 @@ const emptyPos = (): Position => ({
 });
 
 /** Map desk 1m bars into BlockEvent mids so ChartStack can reuse its candle path. */
+function barTsMs(t: number): number {
+  const n = Number(t);
+  if (!Number.isFinite(n) || n <= 0) return Date.now();
+  // Desk bars are epoch ms; tolerate seconds.
+  return n < 1_000_000_000_000 ? Math.round(n * 1000) : Math.round(n);
+}
+
 export function barsToEvents(bars: DeskBar[], live: DeskBar | null): BlockEvent[] {
   const rows =
     live && (!bars.length || bars[bars.length - 1]!.t !== live.t) ? [...bars, live] : bars.slice();
-  return rows.map((b, i) => ({
-    block: i + 1,
-    ts: b.t,
-    mid: b.c,
-    bestBid: b.c,
-    bestAsk: b.c,
-    spreadBps: 0,
-    decision: null,
-    quote: null,
-    fill: null,
-    resting: { bidMon: 0, askMon: 0 },
-    position: emptyPos(),
-    totals: emptyTotals(),
-  }));
+  return rows
+    .filter((b) => Number.isFinite(Number(b.c)) && Number.isFinite(Number(b.t)))
+    .map((b, i) => ({
+      block: i + 1,
+      ts: barTsMs(b.t),
+      mid: Number(b.c),
+      bestBid: Number(b.c),
+      bestAsk: Number(b.c),
+      spreadBps: 0,
+      decision: null,
+      quote: null,
+      fill: null,
+      resting: { bidMon: 0, askMon: 0 },
+      position: emptyPos(),
+      totals: emptyTotals(),
+    }));
 }
 
 export function decisionForSymbol(

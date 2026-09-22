@@ -61,7 +61,7 @@ export default function Desk({
   const deskUi = deskDecisionToUi(deskDec);
   const deskPos = positionForSymbol(desk.positions, desk.selected);
   const hint = feedHint(selected, desk.status, desk.bars.length + (desk.live ? 1 : 0));
-  const chartEvents = desk.events.length ? desk.events : feed.events;
+  const chartEvents = desk.connection === "live" || desk.symbols.length ? desk.events : feed.events;
   const usingDesk = desk.connection === "live" || desk.events.length > 0;
   const showAction = usingDesk
     ? deskUi?.action === "buy"
@@ -171,7 +171,7 @@ export default function Desk({
           </section>
 
           {hint ? <div className={styles.feedHint}>{hint}</div> : null}
-          <ChartStack events={chartEvents} btc={btc} btcOn={btcOn} onToggleBtc={() => setBtcOn((v) => !v)} />
+          <ChartStack events={chartEvents} seriesKey={desk.selected ?? "feed"} btc={btc} btcOn={btcOn} onToggleBtc={() => setBtcOn((v) => !v)} />
         </main>
 
         <aside className={styles.rail}>
