@@ -48,9 +48,13 @@ export const COPY = {
   hold: "HOLD",
   unlock: "never live until Jerry unlock",
   na: "N/A",
+  /** Shown when scores or checklist fields are not on the feed yet. */
+  awaitingFeed: "awaiting feed fields",
 } as const;
 
 const NA = COPY.na;
+/** Unavailable scalar; ASCII dash (desk forbids em/en dashes in rendered copy). */
+const UNAVAIL = "-";
 const WINDOW_MS = 60_000;
 const SPARK_W = 400;
 const SPARK_H = 72;
@@ -170,16 +174,35 @@ function qty(n: number): string {
   return rounded.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
 
+/** Real ladder levels only; no padded N/A rows. Top of book alone is one row per side. */
 function bookRows(levels: number[][] | undefined, best: number | undefined): BookRow[] {
   const rows: BookRow[] = [];
-  for (let i = 0; i < 5; i++) {
-    const lvl = levels?.[i];
-    const price = lvl && finite(lvl[0]) ? lvl[0] : i === 0 && finite(best) ? best : null;
-    const size = lvl && finite(lvl[1]) ? qty(lvl[1]) : NA;
-    if (price == null) rows.push({ price: NA, size: NA, empty: true });
-    else rows.push({ price: fmtPrice(price), size, empty: false });
+  if (levels?.length) {
+    for (const lvl of levels) {
+      if (!lvl || !finite(lvl[0])) continue;
+      rows.push({
+        price: fmtPrice(lvl[0]),
+        size: finite(lvl[1]) ? qty(lvl[1]) : NA,
+        empty: false,
+      });
+    }
+    return rows;
   }
+  if (finite(best)) rows.push({ price: fmtPrice(best), size: NA, empty: false });
   return rows;
+}
+
+/** Gateway model id -> short pill label (typesafe-ai/jev -> jev). */
+export function shortModelLabel(model: string): string {
+  const trimmed = model.trim();
+  const lower = trimmed.toLowerCase();
+  if (lower === "typesafe-ai/jev" || lower.endsWith("/jev")) return "jev";
+  return trimmed;
+}
+
+function blockedLateLabel(lateBlocks: number | undefined): string {
+  if (!finite(lateBlocks)) return `${UNAVAIL} / ${UNAVAIL}`;
+  return `${UNAVAIL} / ${fmtInt(lateBlocks)}`;
 }
 
 function actionOf(decision: Decision | null | undefined): { word: string; tone: Tone } {
@@ -342,6 +365,14 @@ const CHECK_ROWS = [COPY.sellPressure, COPY.spreadTradable, COPY.breakout, COPY.
 export const UNMAPPED_SCORES = SCORE_ROWS.map((row) => ({ label: row.label, value: NA }));
 export const UNMAPPED_CHECKS = CHECK_ROWS.map((label) => ({ label, answer: NA }));
 
+export function scoresHaveFeed(): boolean {
+  return UNMAPPED_SCORES.some((row) => row.value !== NA);
+}
+
+export function checklistHasFeed(): boolean {
+  return UNMAPPED_CHECKS.some((row) => row.answer !== NA);
+}
+
 export function buildDesk(meta: Meta | null, latest: BlockEvent | null, events: BlockEvent[], connection: ConnectionState, apiUrl: string): DeskModel {
   const paper = meta == null || meta.dryRun !== false;
   const model = meta?.model?.trim() ?? "";
@@ -366,13 +397,13 @@ export function buildDesk(meta: Meta | null, latest: BlockEvent | null, events: 
       ? `DRY-RUN | simulated fills | no live money | ${host} overlay`
       : `LIVE WALLET | read only | this desk does not send orders | ${host}`,
     dryRunPill: meta ? `dryRun=${meta.dryRun ? "true" : "false"}` : "dryRun=N/A",
-    modelPill: model ? `MODEL=${model}` : "MODEL=N/A",
+    modelPill: model ? `MODEL=${shortModelLabel(model)}` : "MODEL=N/A",
     modelIsJev,
     dot: connection === "live" ? "live" : "wait",
     gateway: decision && finite(decision.latencyMs) ? `${Math.round(decision.latencyMs)} ms` : NA,
     block: latest && finite(latest.block) ? `#${fmtInt(latest.block)}` : NA,
     paperPnl: { text: pnlN == null ? NA : fmtMoney(pnlN, moneyDigits(pnlN)), tone: moneyTone(pnlN) },
-    account: fmtMoney(equity, 2),
+    account: equity == null ? UNAVAIL : fmtMoney(equity, 2),
     action: action.word,
     actionTone: action.tone,
     confidence: confidenceOf(decision),
@@ -399,7 +430,7 @@ export function buildDesk(meta: Meta | null, latest: BlockEvent | null, events: 
       fills: latest ? fmtInt(latest.totals?.fills) : NA,
       fillsLabel: paper ? "Fills (sim)" : "Fills",
       fillsAmber: paper,
-      blockedLate: latest && finite(latest.totals?.lateBlocks) ? `N/A / ${fmtInt(latest.totals.lateBlocks)}` : "N/A / N/A",
+      blockedLate: latest ? blockedLateLabel(latest.totals?.lateBlocks) : `${UNAVAIL} / ${UNAVAIL}`,
     },
     positionSide: side === "long" ? COPY.long : side === "short" ? COPY.short : side === "flat" ? "FLAT" : NA,
     positionTone,

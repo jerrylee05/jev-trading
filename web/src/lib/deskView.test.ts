@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { COPY, UNMAPPED_CHECKS, UNMAPPED_SCORES, buildDesk, buildSpark } from "./deskView";
+import { COPY, UNMAPPED_CHECKS, UNMAPPED_SCORES, buildDesk, buildSpark, shortModelLabel } from "./deskView";
 import type { BlockEvent, Meta } from "./types";
 
 const FORBIDDEN = /[·—–]/;
@@ -68,8 +68,10 @@ describe("buildDesk", () => {
     expect(view.late.text).toBe("false");
     expect(view.quote.text).toBe("sell sim");
     expect(view.bids[0]).toEqual({ price: "0.022628", size: "1,240", empty: false });
+    expect(view.bids[1]?.price).toBe("0.022621");
+    expect(view.bids).toHaveLength(2);
     expect(view.asks[0]?.size).toBe("980");
-    expect(view.bids[4]?.price).toBe("N/A");
+    expect(view.asks).toHaveLength(2);
     expect(view.mid).toBe("0.022636");
     expect(view.spread).toBe("spread 7.07 bps");
     expect(view.positionSide).toBe("SHORT");
@@ -80,7 +82,7 @@ describe("buildDesk", () => {
     expect(view.resting).toBe("0 / 200");
     expect(view.stats.fills).toBe("47");
     expect(view.stats.fillsLabel).toBe("Fills (sim)");
-    expect(view.stats.blockedLate).toBe("N/A / 2");
+    expect(view.stats.blockedLate).toBe("- / 2");
     expect(view.spark.marker?.label).toBe("▼ SHORT 87%");
     expect(view.spark.marker?.tone).toBe("short");
     expect(view.spark.entryY).not.toBeNull();
@@ -101,7 +103,16 @@ describe("buildDesk", () => {
     const view = buildDesk(meta, latest, [latest], "live", "http://127.0.0.1:3010");
     expect(view.bids[0]).toEqual({ price: "0.022628", size: "N/A", empty: false });
     expect(view.asks[0]).toEqual({ price: "0.022644", size: "N/A", empty: false });
-    expect(view.bids[1]?.price).toBe("N/A");
+    expect(view.bids).toHaveLength(1);
+    expect(view.asks).toHaveLength(1);
+  });
+
+  test("shortens typesafe-ai/jev model pill to MODEL=jev", () => {
+    expect(shortModelLabel("typesafe-ai/jev")).toBe("jev");
+    const gateway: Meta = { ...meta, model: "typesafe-ai/jev" };
+    const view = buildDesk(gateway, event(), [event()], "live", "http://127.0.0.1:3010");
+    expect(view.modelPill).toBe("MODEL=jev");
+    expect(view.modelIsJev).toBe(true);
   });
 
   test("empty feed stays paper and does not paint a decision", () => {
@@ -111,7 +122,7 @@ describe("buildDesk", () => {
     expect(view.action).toBe("N/A");
     expect(view.confidence).toBe("N/A");
     expect(view.mid).toBe("N/A");
-    expect(view.account).toBe("N/A");
+    expect(view.account).toBe("-");
     expect(view.horizon).toBe("N/A");
     expect(view.spark.line).toBeNull();
     expect(view.banner).toContain("127.0.0.1:3010");

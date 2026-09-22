@@ -653,6 +653,15 @@
 .grow { flex: 1; min-height: 0; }
 .tight { margin-bottom: 0; }
 
+.awaitingFeed {
+  margin: 4px 0 0;
+  padding: 10px 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dim);
+  text-align: center;
+}
+
 .footer {
   display: flex;
   justify-content: space-between;
