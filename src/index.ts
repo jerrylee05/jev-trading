@@ -11,7 +11,7 @@ await market.init();
 const model = createModel();
 
 const server = startServer(
-  { model: model.name, wallet: market.address, dryRun: config.dryRun, market: config.market, startedAt: Date.now() },
+  { model: model.name, wallet: market.address, dryRun: config.dryRun, market: config.market, startedAt: Date.now(), bankrollUsd: config.bankrollUsd, horizonBlocks: config.horizonBlocks },
   () => trader.history,
 );
 const trader = new Trader(

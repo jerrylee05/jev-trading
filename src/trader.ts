@@ -18,6 +18,8 @@ export interface BlockEvent {
   fill: Fill | null;
   /** Our size known to be resting on the book after this block's order. */
   resting: { bidMon: number; askMon: number };
+  /** Top of book, best first: [price, size]. Same ladder the model sees. */
+  levels: { bids: [number, number][]; asks: [number, number][] };
   position: { side: "long" | "short" | "flat"; size: number; entryPrice: number | null; unrealizedUsd: number; unrealizedMon: number };
   totals: Totals;
 }
@@ -280,6 +282,7 @@ export class Trader {
       quote,
       fill: null,
       resting: { bidMon: round(this.restingMon("buy"), 1), askMon: round(this.restingMon("sell"), 1) },
+      levels: { bids: book.levels.bids, asks: book.levels.asks },
       position: {
         side: this.position.mon > 0 ? "long" : this.position.mon < 0 ? "short" : "flat",
         size, entryPrice: this.entryPrice(), unrealizedUsd: round(unrealized, 4), unrealizedMon: round(unrealized / book.mid, 4),
