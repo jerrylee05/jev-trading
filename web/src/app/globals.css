@@ -1,23 +1,39 @@
+:root {
+  --bg: #131722;
+  --panel: #1e222d;
+  --border: #2a2e39;
+  --text: #d1d4dc;
+  --muted: #787b86;
+  --up: #26a69a;
+  --down: #ef5350;
+  --ema10: #f5c542;
+  --ema20: #ff9800;
+  --ema50: #2962ff;
+  --ema200: #e040fb;
+  --macd: #2962ff;
+  --signal: #ff6d00;
+  --rsi: #7e57c2;
+  --paper: #fbbf24;
+}
+
 *,
 *::before,
-*::after {
-  box-sizing: border-box;
-}
+*::after { box-sizing: border-box; }
 
 html,
 body {
   margin: 0;
   padding: 0;
   min-height: 100%;
-  background: #07090e;
-  color: #e8eef8;
+  background: var(--bg);
+  color: var(--text);
 }
 
 body {
   font-family: var(--font-inter), Inter, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
 }
 
 h1, h2, h3, h4, p { margin: 0; }
-
 button, input, select, textarea { font: inherit; color: inherit; }

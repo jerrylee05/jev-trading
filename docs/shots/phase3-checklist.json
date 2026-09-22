@@ -1,0 +1,29 @@
+{
+  "checks": {
+    "btcLit": true,
+    "btcMidScale": true,
+    "breatheOk": true,
+    "paperChrome": true,
+    "noMonOnDetail": true,
+    "nvdaDash": true,
+    "nvdaNoMonMid": true,
+    "watchlistClick": true,
+    "mobileLit": true
+  },
+  "notes": [
+    {
+      "mid1": "85,270.85",
+      "pct1": 6.27,
+      "pct2": 6.27,
+      "detailHead": "SYMBOL DETAIL POSITION SHORT SIZE 0.116909 ENTRY 85,519.582662 NOTIONAL 9,998 UNREALIZED +29.0791 PAPER PNL +3.4476 RESTING — QUOTE — FILLS — LATE BLOCKS — desk live dryRun true MO"
+    },
+    {
+      "nvdaHead": "—"
+    },
+    {
+      "mobPct": 10.76
+    }
+  ],
+  "pass": true,
+  "fail": []
+}

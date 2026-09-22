@@ -1,0 +1,9 @@
+{
+  "venue": "alpaca",
+  "paused": false,
+  "display": "NVDA (NVIDIA Corporation Common Stock)",
+  "nBars": 5,
+  "lastClose": 229.17,
+  "tradeHost": "paper-api (PK key)",
+  "pass": true
+}

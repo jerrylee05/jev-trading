@@ -1,0 +1,85 @@
+{
+  "commit": "2178492",
+  "btcMid": "85,270.85",
+  "nvdaHeader": "0.024927",
+  "btcOhlc": "O 85270.850000 H 85270.850000 L 85270.850000 C 85270.850000 -0.00%",
+  "deskLive": true,
+  "litRatio": 1,
+  "litPixels": 6681,
+  "hasMONInDetail": true,
+  "breathePass": true,
+  "deltas": [
+    {
+      "i": 0,
+      "dw": 0,
+      "dh": 0
+    },
+    {
+      "i": 1,
+      "dw": 0,
+      "dh": 0
+    },
+    {
+      "i": 2,
+      "dw": 0,
+      "dh": 0
+    },
+    {
+      "i": 3,
+      "dw": 0,
+      "dh": 0
+    },
+    {
+      "i": 4,
+      "dw": 0,
+      "dh": 0
+    },
+    {
+      "i": 5,
+      "dw": 0,
+      "dh": 0
+    },
+    {
+      "i": 6,
+      "dw": 0,
+      "dh": 0
+    },
+    {
+      "i": 7,
+      "dw": 0,
+      "dh": 0
+    },
+    {
+      "i": 8,
+      "dw": 0,
+      "dh": 0
+    },
+    {
+      "i": 9,
+      "dw": 0,
+      "dh": 0
+    },
+    {
+      "i": 10,
+      "dw": 0,
+      "dh": 0
+    },
+    {
+      "i": 11,
+      "dw": 0,
+      "dh": 0
+    }
+  ],
+  "fails": {
+    "monMidOnBtcHeader": false,
+    "monMidOnEquityHeader": false,
+    "emptyBtcWhileLive": false,
+    "breatheReturns": false
+  },
+  "pass": true,
+  "notes": {
+    "btcScaleOhlc": true,
+    "candlesLikely": true,
+    "nvdaNoFeed": true
+  }
+}

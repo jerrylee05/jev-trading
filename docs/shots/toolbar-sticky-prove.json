@@ -1,0 +1,70 @@
+{
+  "before": {
+    "1s": true,
+    "2s": true,
+    "5s": true,
+    "10s": true,
+    "15s": true,
+    "30s": true,
+    "1m": true,
+    "EMA": true,
+    "MACD": true,
+    "RSI": true
+  },
+  "afterRsi": {
+    "1s": true,
+    "2s": true,
+    "5s": true,
+    "10s": true,
+    "15s": true,
+    "30s": true,
+    "1m": true,
+    "EMA": true,
+    "MACD": true,
+    "RSI": true
+  },
+  "afterAll": {
+    "1s": true,
+    "2s": true,
+    "5s": true,
+    "10s": true,
+    "15s": true,
+    "30s": true,
+    "1m": true,
+    "EMA": true,
+    "MACD": true,
+    "RSI": true
+  },
+  "clicks": {
+    "1s": {
+      "vis": true,
+      "active": true
+    },
+    "5s": {
+      "vis": true,
+      "active": true
+    },
+    "1m": {
+      "vis": true,
+      "active": true
+    },
+    "15s": {
+      "vis": true,
+      "active": true
+    }
+  },
+  "mobTf": {
+    "1s": true,
+    "1m": true,
+    "EMA": true,
+    "MACD": true,
+    "RSI": true
+  },
+  "toolbarY0": 150,
+  "toolbarY1": 150,
+  "toolbarH": 57,
+  "stickyOk": true,
+  "desktopBtnsVisible": true,
+  "mobileBtnsVisible": true,
+  "pass": true
+}

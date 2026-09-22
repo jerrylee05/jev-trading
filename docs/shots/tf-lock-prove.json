@@ -1,0 +1,36 @@
+{
+  "vis": {
+    "1m": true,
+    "10m": true,
+    "30m": true,
+    "1h": true,
+    "1d": true,
+    "1w": true,
+    "1M": true
+  },
+  "absent": {
+    "1s": true,
+    "2s": true,
+    "5s": true,
+    "10s": true,
+    "15s": true,
+    "30s": true
+  },
+  "clicks": {
+    "1m": true,
+    "10m": true,
+    "1h": true,
+    "1d": true,
+    "1M": true
+  },
+  "still": {
+    "1m": true,
+    "10m": true,
+    "30m": true,
+    "1h": true,
+    "1d": true,
+    "1w": true,
+    "1M": true
+  },
+  "pass": true
+}

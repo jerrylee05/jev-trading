@@ -1,0 +1,22 @@
+{
+  "ok": true,
+  "picked": "BTCUSD",
+  "meta": "BTCUSD · 1m",
+  "ohlc": "O 85482.180000 H 85482.180000 L 85482.180000 C 85482.180000 +0.04%",
+  "empty": "",
+  "has1527m": false,
+  "hugeStoreSpan": false,
+  "canvasCount": 15,
+  "host": {
+    "w": 1119,
+    "h": 686
+  },
+  "shot": "docs/shots/density-1m-packed.png",
+  "json": "docs/shots/density-1m-packed.json",
+  "url": "http://127.0.0.1:3001/",
+  "softPullPort": 3001,
+  "tf": "1m",
+  "packedBars": 320,
+  "note": "vs ref-1m-density-pass: packed ~320-bar window via setVisibleLogicalRange; meta is symbol·TF not whole-store span",
+  "at": "2026-09-22T17:36:17.082Z"
+}

@@ -1,0 +1,19 @@
+/* Jev Multi-Desk Phase 0 — TradingView dark tokens (Jerry SPEC 2026-09-21) */
+:root {
+  --bg: #131722;
+  --panel: #1e222d;
+  --border: #2a2e39;
+  --text: #d1d4dc;
+  --muted: #787b86;
+  --up: #26a69a;
+  --down: #ef5350;
+  --ema10: #f5c542;
+  --ema20: #ff9800;
+  --ema50: #2962ff;
+  --ema200: #e040fb;
+  --macd: #2962ff;
+  --signal: #ff6d00;
+  --rsi: #7e57c2;
+  --paper: #fbbf24;
+  --rail-width: 320px;
+}
