@@ -66,7 +66,7 @@ export default function Desk({ feed, apiUrl }: { feed: FeedState; apiUrl: string
             <div className={`${styles.decision} ${actionClass(showTone)}`}>
               <span className={styles.decisionLabel}>Decision</span>
               <span className={styles.decisionAction}>{showAction}</span>
-              {carried ? <span className={styles.carried}>{carried}</span> : null}
+              <span className={styles.carried}>{carried || " "}</span>
             </div>
             <div className={styles.decisionMeta}>
               <div>

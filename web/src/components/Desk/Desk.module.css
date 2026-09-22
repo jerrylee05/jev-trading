@@ -136,6 +136,9 @@
   padding: 10px 14px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
+  /* Fixed height so carried badge cannot resize the chart host */
+  min-height: 102px;
+  box-sizing: border-box;
 }
 
 .decision {
@@ -164,6 +167,8 @@
 .carried {
   font-size: 11px;
   color: var(--paper);
+  min-height: 1.25em;
+  display: block;
 }
 
 .actionLong { color: var(--up); }

@@ -346,26 +346,29 @@ export default function ChartStack(props: ChartStackProps) {
     }
 
     const chart = chartRef.current;
+    // Fit + unlock autoScale only on TF/style reset (or first paint). Never on ticks.
     if (chart && ohlc.length && (reset || !scaleLockedRef.current)) {
-      if (reset) scaleLockedRef.current = false;
-      chart.priceScale("right").applyOptions({ autoScale: true });
-      try {
-        chart.priceScale("btc").applyOptions({ autoScale: true });
-      } catch {
-        /* overlay scale may not exist yet */
-      }
-      // fitContent only on TF/style reset or first paint — never on every tick
-      chart.timeScale().fitContent();
-      requestAnimationFrame(() => {
-        if (!chartRef.current) return;
-        chartRef.current.priceScale("right").applyOptions({ autoScale: false });
+      const shouldFit = reset || !scaleLockedRef.current;
+      if (reset) {
+        scaleLockedRef.current = false;
+        chart.priceScale("right").applyOptions({ autoScale: true });
         try {
-          chartRef.current.priceScale("btc").applyOptions({ autoScale: false });
+          chart.priceScale("btc").applyOptions({ autoScale: true });
         } catch {
-          /* ignore */
+          /* overlay scale may not exist yet */
         }
-        scaleLockedRef.current = true;
-      });
+        chart.timeScale().fitContent();
+      } else if (shouldFit && !scaleLockedRef.current) {
+        // First paint only: one fit, then lock. Do not re-enter on later ticks.
+        chart.timeScale().fitContent();
+      }
+      chart.priceScale("right").applyOptions({ autoScale: false });
+      try {
+        chart.priceScale("btc").applyOptions({ autoScale: false });
+      } catch {
+        /* ignore */
+      }
+      scaleLockedRef.current = true;
     }
   }, [candles, emaSeries, macdSeries, rsiSeries, closes.length, bucketMs, barStyle, btc, btcOn, nowMs]);
 
