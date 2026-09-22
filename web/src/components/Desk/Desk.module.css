@@ -122,11 +122,16 @@
 }
 
 .main {
-  display: grid;
-  grid-template-rows: auto 1fr;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   min-height: 0;
   border-right: 1px solid var(--border);
+}
+
+.main > :last-child {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .decisionBar {
