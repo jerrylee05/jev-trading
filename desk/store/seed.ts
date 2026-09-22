@@ -1,5 +1,5 @@
 import type { SymbolRef } from "../adapters/types";
-import { addWatchSymbol, watchlistCount } from "./db";
+import { addWatchSymbol, listWatchlist, patchWatchSymbol, watchlistCount } from "./db";
 
 export type SeedResolveResult =
   | { ok: true; ref: Pick<SymbolRef, "symbol" | "venue" | "assetClass" | "display"> }
@@ -72,4 +72,36 @@ export async function seedEmptyWatchlist(
   }
 
   return { seeded: added.length > 0, added };
+}
+
+export interface ReorderResult {
+  reordered: boolean;
+  order: string[];
+}
+
+/**
+ * If the watchlist is exactly the Jerry default set (any order / any positions),
+ * rewrite positions to match `defaults` (NVDA…BTCUSD). Custom lists are left alone.
+ */
+export function reorderDefaultWatchlist(defaults: readonly string[]): ReorderResult {
+  const want = defaults.map((s) => s.trim().toUpperCase()).filter(Boolean);
+  const rows = listWatchlist();
+  const have = rows.map((r) => r.symbol.toUpperCase());
+  if (want.length === 0 || have.length !== want.length) {
+    return { reordered: false, order: have };
+  }
+  const wantSet = new Set(want);
+  if (have.some((s) => !wantSet.has(s))) {
+    return { reordered: false, order: have };
+  }
+  if (have.every((s, i) => s === want[i])) {
+    return { reordered: false, order: have };
+  }
+  for (let i = 0; i < want.length; i++) {
+    patchWatchSymbol(want[i]!, { position: 1000 + i });
+  }
+  for (let i = 0; i < want.length; i++) {
+    patchWatchSymbol(want[i]!, { position: i });
+  }
+  return { reordered: true, order: listWatchlist().map((r) => r.symbol.toUpperCase()) };
 }

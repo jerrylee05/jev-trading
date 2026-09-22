@@ -14,7 +14,7 @@ import {
   openDb,
   watchlistCount,
 } from "./store/db";
-import { seedEmptyWatchlist } from "./store/seed";
+import { reorderDefaultWatchlist, seedEmptyWatchlist } from "./store/seed";
 import { createPaperAndModel, startDecisionLoop } from "./engine/loop";
 import { resolveDeskModelName } from "./engine/model";
 
@@ -48,6 +48,9 @@ async function seedWatchlist() {
   // Empty table only. A saved watchlist is not rewritten and missing names are not filled back in.
   const result = await seedEmptyWatchlist(deskConfig.symbols, (sym) => resolveSymbol(adapters, sym));
   if (result.added.length) console.log(`[desk] seeded ${result.added.length} watchlist symbol(s)`);
+  // Fix Jerry default order when an older DB has the same 6 symbols out of order (e.g. BTCUSD first).
+  const re = reorderDefaultWatchlist(deskConfig.symbols);
+  if (re.reordered) console.log(`[desk] reordered watchlist → ${re.order.join(",")}`);
 }
 
 async function backfillAll() {

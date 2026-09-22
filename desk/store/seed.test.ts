@@ -3,7 +3,7 @@ import { rmSync } from "node:fs";
 import { join } from "node:path";
 import { DEFAULT_DESK_SYMBOLS } from "../config";
 import { addWatchSymbol, getDb, listWatchlist, openDb } from "./db";
-import { seedEmptyWatchlist, type SeedResolveResult } from "./seed";
+import { reorderDefaultWatchlist, seedEmptyWatchlist, type SeedResolveResult } from "./seed";
 
 const PATH = join(import.meta.dir, "..", "..", "data", "desk-seed-test.sqlite");
 
@@ -94,5 +94,37 @@ describe("empty watchlist cold start", () => {
     expect(rows[1]?.paused).toBe(1);
     expect(rows[0]?.position).toBe(0);
     expect(rows[2]?.position).toBe(2);
+  });
+
+  test("reorderDefaultWatchlist fixes BTCUSD-first permutation", () => {
+    const order = ["BTCUSD", "NVDA", "TSLA", "QQQ", "SPY", "MSTR"] as const;
+    for (const sym of order) {
+      addWatchSymbol({
+        symbol: sym,
+        venue: sym === "BTCUSD" ? "coinbase" : "alpaca",
+        asset_class: sym === "BTCUSD" ? "crypto" : "us_equity",
+        display: sym,
+        position: sym === "BTCUSD" ? 0 : 5,
+        paused: 0,
+      });
+    }
+    const re = reorderDefaultWatchlist(DEFAULT_DESK_SYMBOLS);
+    expect(re.reordered).toBe(true);
+    expect(listWatchlist().map((r) => r.symbol)).toEqual([...DEFAULT_DESK_SYMBOLS]);
+    expect(listWatchlist().map((r) => r.position)).toEqual([0, 1, 2, 3, 4, 5]);
+  });
+
+  test("reorderDefaultWatchlist leaves custom lists alone", () => {
+    addWatchSymbol({
+      symbol: "AAPL",
+      venue: "alpaca",
+      asset_class: "us_equity",
+      display: "AAPL",
+      position: 0,
+      paused: 0,
+    });
+    const re = reorderDefaultWatchlist(DEFAULT_DESK_SYMBOLS);
+    expect(re.reordered).toBe(false);
+    expect(listWatchlist().map((r) => r.symbol)).toEqual(["AAPL"]);
   });
 });
