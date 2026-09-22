@@ -365,34 +365,12 @@ export default function Desk({
                         </span>
                         <span className={styles.watchVenue}>{s.venue}</span>
                       </button>
-                      <button
-                        type="button"
-                        className={styles.watchDel}
-                        aria-label={`Remove ${s.symbol}`}
-                        disabled={busy}
-                        onClick={() => void onRemove(s.symbol)}
-                      >
-                        ×
-                      </button>
                     </li>
                   );
                 })}
               </ul>
             )}
-            <form className={styles.watchAdd} onSubmit={(e) => void onAdd(e)}>
-              <input
-                className={styles.watchInput}
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                placeholder="Add symbol"
-                aria-label="Add symbol"
-                disabled={busy}
-              />
-              <button type="submit" className={styles.watchAddBtn} disabled={busy || !draft.trim()}>
-                Add
-              </button>
-            </form>
-            {formErr ? <div className={styles.watchErr}>{formErr}</div> : null}
+            {/* Add/× hidden for 30m watchlist slice — Jerry lock */}
           </div>
           <div className={styles.symbolDetail}>
             <div className={styles.railHead}>Symbol detail</div>
