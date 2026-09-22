@@ -20,7 +20,6 @@ import {
   buildCandles,
   chooseBucket,
   ema,
-  formatWindow,
   isShortWindow,
   macd,
   mergeImmutableCandles,
@@ -42,6 +41,14 @@ const TF_OPTIONS = [
   { label: "1w", ms: 604_800_000 },
   { label: "1M", ms: 2_592_000_000 },
 ] as const;
+
+/** Default visible bar count — packed session density (TradingView-like), not fitContent. */
+const PACKED_VISIBLE_BARS = 320;
+
+function packedVisibleBars(_bucketMs: number): number {
+  // Same packed default for 1m and peer TFs; clamp later to available length.
+  return PACKED_VISIBLE_BARS;
+}
 
 const EMA_PERIODS = [10, 20, 50, 200] as const;
 const EMA_COLORS = ["#f5c542", "#ff9800", "#2962ff", "#e040fb"] as const;
@@ -418,9 +425,9 @@ export default function ChartStack(props: ChartStackProps) {
     }
 
     const chart = chartRef.current;
-    // Fit only on TF/style/symbol reset (or first paint). Keep autoScale ON —
-    // locking autoScale:false in the same turn as fitContent was blanking the
-    // price pane (indicators still drew; candles sat off-scale).
+    // Packed default window on TF/style/symbol reset (or first paint) — NOT
+    // fitContent across the whole bar store (that yields sparse/gappy 1m).
+    // Keep autoScale ON so Y still fits the visible candles.
     if (chart && ohlc.length && (reset || !scaleLockedRef.current)) {
       chart.priceScale("right").applyOptions({ autoScale: true });
       try {
@@ -428,7 +435,20 @@ export default function ChartStack(props: ChartStackProps) {
       } catch {
         /* overlay scale may not exist yet */
       }
-      chart.timeScale().fitContent();
+      const n = Math.min(ohlc.length, packedVisibleBars(bucketMs));
+      const from = Math.max(0, ohlc.length - n) - 0.5;
+      const to = ohlc.length - 1 + 0.5;
+      try {
+        chart.timeScale().setVisibleLogicalRange({ from, to });
+      } catch {
+        chart.timeScale().fitContent();
+      }
+      // Avoid hairline candles when the pane is wide vs packed bar count.
+      try {
+        chart.timeScale().applyOptions({ minBarSpacing: 4, barSpacing: 6 });
+      } catch {
+        /* older LWC */
+      }
       scaleLockedRef.current = true;
     }
     } catch (err) {
@@ -493,8 +513,8 @@ export default function ChartStack(props: ChartStackProps) {
         <button type="button" className={btcOn ? styles.toolActive : styles.toolBtn} onClick={onToggleBtc}>
           BTC ref
         </button>
-                <span className={styles.chartMeta}>
-          {symbol ?? seriesKey} · {bucketLabel} · {formatWindow(span)}
+        <span className={styles.chartMeta}>
+          {symbol ?? seriesKey} · {bucketLabel}
           {short ? " · short window" : ""}
           {btcOn ? " · BTC ref overlay" : ""}
         </span>
