@@ -321,24 +321,31 @@
 .dn { color: var(--down); }
 .flat { color: var(--text); }
 
-/* Chart stack */
+/* Chart stack — toolbar always visible above LWC panes */
 .chartStack {
-  display: grid;
-  grid-template-rows: 36px 1fr;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   height: 100%;
   position: relative;
   background: var(--bg);
+  isolation: isolate;
 }
 
 .chartToolbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  flex: 0 0 auto;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  padding: 0 10px;
+  gap: 6px 8px;
+  min-height: 36px;
+  padding: 4px 10px;
   border-bottom: 1px solid var(--border);
-  overflow-x: auto;
-  white-space: nowrap;
+  background: var(--bg);
+  box-shadow: 0 1px 0 var(--border);
 }
 
 .tfGroup {
@@ -386,6 +393,13 @@
   text-align: right;
 }
 
+.chartBody {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+
 .chartHost {
   min-height: 0;
   height: 100%;
@@ -394,17 +408,19 @@
   contain: layout size;
   transform: none;
   animation: none;
+  z-index: 0;
 }
 
 .chartEmpty {
   position: absolute;
-  inset: 36px 0 0 0;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--muted);
   font-size: 13px;
   pointer-events: none;
+  z-index: 1;
 }
 
 @media (max-width: 900px) {

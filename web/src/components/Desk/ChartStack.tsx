@@ -501,8 +501,12 @@ export default function ChartStack(props: ChartStackProps) {
           </span>
         ) : null}
       </div>
-      <div className={styles.chartHost} ref={hostRef} />
-      {!candles.length ? <div className={styles.chartEmpty}>Waiting for paper mids from the trader feed.</div> : null}
+      <div className={styles.chartBody}>
+        <div className={styles.chartHost} ref={hostRef} />
+        {!candles.length ? (
+          <div className={styles.chartEmpty}>Waiting for paper mids from the trader feed.</div>
+        ) : null}
+      </div>
     </div>
   );
 }
