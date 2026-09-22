@@ -1,4 +1,15 @@
-import { COPY, UNMAPPED_CHECKS, UNMAPPED_SCORES, buildDesk, type DeskModel, type MoneyTone, type SparkFill, type SparkModel } from "@/lib/deskView";
+import {
+  COPY,
+  UNMAPPED_CHECKS,
+  UNMAPPED_SCORES,
+  buildDesk,
+  checklistHasFeed,
+  scoresHaveFeed,
+  type DeskModel,
+  type MoneyTone,
+  type SparkFill,
+  type SparkModel,
+} from "@/lib/deskView";
 import type { FeedState } from "@/lib/types";
 import styles from "./Desk.module.css";
 
@@ -219,28 +230,36 @@ function DeskBody({ view }: { view: DeskModel }) {
               <span>{COPY.scores}</span>
               <span className={styles.sub}>{COPY.parallel}</span>
             </div>
-            {UNMAPPED_SCORES.map((row) => (
-              <div className={styles.scoreRow} key={row.label}>
-                <span>{row.label}</span>
-                <div className={styles.scoreBar}><i /></div>
-                <span className={styles.scoreVal}>{row.value}</span>
-              </div>
-            ))}
+            {scoresHaveFeed() ? (
+              UNMAPPED_SCORES.map((row) => (
+                <div className={styles.scoreRow} key={row.label}>
+                  <span>{row.label}</span>
+                  <div className={styles.scoreBar}><i /></div>
+                  <span className={styles.scoreVal}>{row.value}</span>
+                </div>
+              ))
+            ) : (
+              <p className={styles.awaitingFeed}>{COPY.awaitingFeed}</p>
+            )}
           </section>
           <section className={`${styles.pane} ${styles.grow}`} title="Noul checklist is not in the trader status.">
             <div className={styles.pt}>
               <span>{COPY.checklist}</span>
               <span className={styles.sub}>{COPY.gate}</span>
             </div>
-            <div className={styles.noul}>
-              {UNMAPPED_CHECKS.map((row) => (
-                <div className={styles.noulItem} key={row.label}>
-                  <span className={styles.noulDot} />
-                  <span className={styles.noulLab}>{row.label}</span>
-                  <span className={styles.noulAns}>{row.answer}</span>
-                </div>
-              ))}
-            </div>
+            {checklistHasFeed() ? (
+              <div className={styles.noul}>
+                {UNMAPPED_CHECKS.map((row) => (
+                  <div className={styles.noulItem} key={row.label}>
+                    <span className={styles.noulDot} />
+                    <span className={styles.noulLab}>{row.label}</span>
+                    <span className={styles.noulAns}>{row.answer}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className={styles.awaitingFeed}>{COPY.awaitingFeed}</p>
+            )}
           </section>
         </div>
       </div>
