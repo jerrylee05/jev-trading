@@ -138,7 +138,7 @@ export function feedHint(
   const alpaca = status?.alpacaConfigured === true;
   const venue = (sym.venue || "").toLowerCase();
   if (sym.symbol === "BTCUSD" || venue === "coinbase") return "No feed yet from Coinbase";
-  if (!alpaca) return "No feed · Alpaca keys missing";
+  if (!alpaca || venue === "unresolved") return "No feed · Alpaca keys missing";
   return "No feed";
 }
 

@@ -45,13 +45,27 @@ function status() {
 }
 
 async function seedWatchlist() {
-  if (watchlistCount() > 0) return;
-  console.log(`[desk] seeding watchlist from DESK_SYMBOLS (${deskConfig.symbols.join(",")})`);
-  let pos = 0;
+  // Fill any missing DESK_SYMBOLS defaults. Unresolved equities stay on the rail
+  // as paused placeholders so the UI can show an honest "no feed" state.
+  const existing = new Set(listWatchlist().map((r) => r.symbol.toUpperCase()));
+  let pos = watchlistCount();
+  let added = 0;
   for (const sym of deskConfig.symbols) {
+    const canon = sym.trim().toUpperCase();
+    if (!canon || existing.has(canon)) continue;
     const outcome = await resolveSymbol(adapters, sym);
     if (!outcome.ok) {
-      console.warn(`[desk] seed skip ${sym}: ${outcome.reason}`);
+      console.warn(`[desk] seed placeholder ${canon}: ${outcome.reason}`);
+      addWatchSymbol({
+        symbol: canon,
+        venue: "unresolved",
+        asset_class: canon.includes("BTC") ? "crypto" : "us_equity",
+        display: canon,
+        position: pos++,
+        paused: 1,
+      });
+      existing.add(canon);
+      added++;
       continue;
     }
     addWatchSymbol({
@@ -62,7 +76,10 @@ async function seedWatchlist() {
       position: pos++,
       paused: 0,
     });
+    existing.add(outcome.ref.symbol.toUpperCase());
+    added++;
   }
+  if (added) console.log(`[desk] seeded ${added} watchlist symbol(s)`);
 }
 
 async function backfillAll() {
@@ -155,7 +172,7 @@ async function main() {
   stopLoop = startDecisionLoop({ aggregator, hub, paper, model });
   hub.broadcast("status", status());
   console.log(
-    `[desk] Phase 2 ready model=${resolveDeskModelName()}(${model.name}) symbols=${listWatchlist().map((s) => s.symbol).join(",") || "(none)"} paperCash=${paper.cashUsd}`,
+    `[desk] Phase 3 ready model=${resolveDeskModelName()}(${model.name}) symbols=${listWatchlist().map((s) => s.symbol).join(",") || "(none)"} paperCash=${paper.cashUsd}`,
   );
 }
 
