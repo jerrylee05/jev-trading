@@ -374,12 +374,21 @@
   font-family: var(--font-plex), ui-monospace, monospace;
 }
 
-.chartOhlc { margin-left: auto; }
+.chartOhlc {
+  margin-left: auto;
+  min-width: 28ch;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
 
 .chartHost {
   min-height: 0;
   height: 100%;
   width: 100%;
+  overflow: hidden;
+  contain: layout size;
+  transform: none;
+  animation: none;
 }
 
 .chartEmpty {

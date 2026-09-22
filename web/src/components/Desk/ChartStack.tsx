@@ -72,6 +72,8 @@ export default function ChartStack(props: ChartStackProps) {
   const frozenRef = useRef<Candle[]>([]);
   const lockedBucketRef = useRef<number | null>(null);
   const dataKeyRef = useRef("");
+  const scaleLockedRef = useRef(false);
+  const btcKeyRef = useRef("");
 
   const [barStyle, setBarStyle] = useState<BarStyle>("candles");
   const [tfMs, setTfMs] = useState<number | null>(null);
@@ -114,7 +116,8 @@ export default function ChartStack(props: ChartStackProps) {
         attributionLogo: false,
       },
       grid: { vertLines: { color: "#2a2e39" }, horzLines: { color: "#2a2e39" } },
-      rightPriceScale: { borderColor: "#2a2e39" },
+      // autoScale on at create; locked after first setData so ticks do not re-fit Y
+      rightPriceScale: { borderColor: "#2a2e39", autoScale: true },
       timeScale: { borderColor: "#2a2e39", timeVisible: true, secondsVisible: true },
       crosshair: { mode: 0 },
     });
@@ -196,6 +199,8 @@ export default function ChartStack(props: ChartStackProps) {
     chart.priceScale("btc").applyOptions({ borderVisible: false });
     chartRef.current = chart;
     return () => {
+      scaleLockedRef.current = false;
+      btcKeyRef.current = "";
       chart.remove();
       chartRef.current = null;
       priceRef.current = null;
@@ -332,7 +337,35 @@ export default function ChartStack(props: ChartStackProps) {
         t0,
         t1,
       );
-      btcRef.current.setData(aligned.map((p) => ({ time: toTime(p.t), value: p.p })));
+      const btcData = aligned.map((p) => ({ time: toTime(p.t), value: p.p }));
+      const btcKey = `${bucketMs}:btc:${btcOn}`;
+      const btcReset = reset || btcKeyRef.current !== btcKey;
+      btcKeyRef.current = btcKey;
+      if (btcReset) btcRef.current.setData(btcData);
+      else if (btcData.length) btcRef.current.update(btcData[btcData.length - 1]!);
+    }
+
+    const chart = chartRef.current;
+    if (chart && ohlc.length && (reset || !scaleLockedRef.current)) {
+      if (reset) scaleLockedRef.current = false;
+      chart.priceScale("right").applyOptions({ autoScale: true });
+      try {
+        chart.priceScale("btc").applyOptions({ autoScale: true });
+      } catch {
+        /* overlay scale may not exist yet */
+      }
+      // fitContent only on TF/style reset or first paint — never on every tick
+      chart.timeScale().fitContent();
+      requestAnimationFrame(() => {
+        if (!chartRef.current) return;
+        chartRef.current.priceScale("right").applyOptions({ autoScale: false });
+        try {
+          chartRef.current.priceScale("btc").applyOptions({ autoScale: false });
+        } catch {
+          /* ignore */
+        }
+        scaleLockedRef.current = true;
+      });
     }
   }, [candles, emaSeries, macdSeries, rsiSeries, closes.length, bucketMs, barStyle, btc, btcOn, nowMs]);
 
@@ -341,6 +374,8 @@ export default function ChartStack(props: ChartStackProps) {
     lockedBucketRef.current = ms;
     frozenRef.current = [];
     dataKeyRef.current = "";
+    scaleLockedRef.current = false;
+    btcKeyRef.current = "";
   }
 
   const last = candles[candles.length - 1];
