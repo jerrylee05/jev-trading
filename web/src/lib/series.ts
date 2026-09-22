@@ -80,8 +80,10 @@ export function chooseBucket(span: number): { bucketMs: number; label: string } 
   let best = fallback;
   let bestScore = Infinity;
   let found = false;
+  let anyOverCap = false;
   for (const b of BUCKETS) {
     const bars = span / b.ms;
+    if (bars > 90) anyOverCap = true;
     if (bars < 8 || bars > 90) continue;
     const score = Math.abs(bars - target);
     if (score < bestScore) {
@@ -91,8 +93,9 @@ export function chooseBucket(span: number): { bucketMs: number; label: string } 
     }
   }
   if (found) return best;
-  // Long spans (e.g. 500x1m desk bars) exceed the 90-bar cap on every bucket.
-  // Prefer the coarsest bucket that still yields >= 8 bars; else 1m.
+  // Short spans (every bucket < 8 bars) keep the fine 1s default.
+  // Only long spans that exceeded the 90-bar cap use coarse/1m fallback.
+  if (!anyOverCap) return fallback;
   for (let i = BUCKETS.length - 1; i >= 0; i--) {
     const b = BUCKETS[i]!;
     if (span / b.ms >= 8) return asBucket(b);

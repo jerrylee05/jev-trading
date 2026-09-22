@@ -34,6 +34,8 @@ test("bucket follows the observed span", () => {
   expect(chooseBucket(60_000).label).toBe("2s");
   expect(chooseBucket(5_000).label).toBe("1s");
   expect(chooseBucket(0).label).toBe("1s");
+  // Long history (500x1m) exceeds 90-bar cap → coarse 1m, not fine 1s.
+  expect(chooseBucket(500 * 60_000).label).toBe("1m");
 });
 
 test("short window is about a minute of paper mids", () => {

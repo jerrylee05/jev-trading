@@ -68,6 +68,49 @@ export default function Desk({
     usingDesk && deskLast != null && Number.isFinite(deskLast)
       ? deskLast.toLocaleString(undefined, { maximumFractionDigits: 6 })
       : null;
+  const deskDetail = (() => {
+    if (!usingDesk) return null;
+    const qty = deskPos?.qty ?? 0;
+    const entry = deskPos?.avg_price ?? null;
+    const mark = deskLast;
+    const side = qty > 0 ? "LONG" : qty < 0 ? "SHORT" : "FLAT";
+    const tone = qty > 0 ? "long" : qty < 0 ? "short" : undefined;
+    const size =
+      Math.abs(qty) > 0 ? Math.abs(qty).toLocaleString(undefined, { maximumFractionDigits: 6 }) : "—";
+    const entryText =
+      entry != null && Number.isFinite(entry)
+        ? entry.toLocaleString(undefined, { maximumFractionDigits: 6 })
+        : "—";
+    const notional =
+      entry != null && Math.abs(qty) > 0
+        ? (Math.abs(qty) * entry).toLocaleString(undefined, { maximumFractionDigits: 2 })
+        : "—";
+    let unrealizedText = "—";
+    let unrealizedTone: "up" | "dn" | "flat" | undefined;
+    if (entry != null && mark != null && Math.abs(qty) > 0) {
+      const u = (mark - entry) * qty;
+      unrealizedTone = u > 0 ? "up" : u < 0 ? "dn" : "flat";
+      unrealizedText = u.toLocaleString(undefined, { maximumFractionDigits: 4, signDisplay: "exceptZero" });
+    }
+    const realized = deskPos?.realized_usd;
+    let paperText = "—";
+    let paperTone: "up" | "dn" | "flat" | undefined;
+    if (realized != null && Number.isFinite(realized)) {
+      paperTone = realized > 0 ? "up" : realized < 0 ? "dn" : "flat";
+      paperText = realized.toLocaleString(undefined, { maximumFractionDigits: 4, signDisplay: "exceptZero" });
+    }
+    return {
+      side,
+      tone,
+      size,
+      entryText,
+      notional,
+      unrealizedText,
+      unrealizedTone,
+      paperText,
+      paperTone,
+    };
+  })();
   const showAction = usingDesk
     ? deskUi?.action === "buy"
       ? "LONG"
@@ -127,8 +170,8 @@ export default function Desk({
         </div>
         <div className={styles.quoteStrip}>
           <span className={styles.last}>{deskQuoteMid ?? view.mid}</span>
-          <span className={styles.muted}>{view.spread}</span>
-          <span className={styles.muted}>{view.touch}</span>
+          <span className={styles.muted}>{usingDesk ? "—" : view.spread}</span>
+          <span className={styles.muted}>{usingDesk ? "—" : view.touch}</span>
         </div>
         <div className={styles.topPills}>
           <span className={styles.pill}>{view.dryRunPill}</span>
@@ -248,45 +291,57 @@ export default function Desk({
             <dl className={styles.detailGrid}>
               <div>
                 <dt>Position</dt>
-                <dd className={view.positionTone === "long" ? styles.up : view.positionTone === "short" ? styles.dn : undefined}>
-                  {view.positionSide}
+                <dd
+                  className={
+                    (deskDetail?.tone ?? view.positionTone) === "long"
+                      ? styles.up
+                      : (deskDetail?.tone ?? view.positionTone) === "short"
+                        ? styles.dn
+                        : undefined
+                  }
+                >
+                  {deskDetail?.side ?? view.positionSide}
                 </dd>
               </div>
               <div>
                 <dt>Size</dt>
-                <dd>{view.size}</dd>
+                <dd>{deskDetail ? deskDetail.size : view.size}</dd>
               </div>
               <div>
                 <dt>Entry</dt>
-                <dd>{view.entry}</dd>
+                <dd>{deskDetail ? deskDetail.entryText : view.entry}</dd>
               </div>
               <div>
                 <dt>Notional</dt>
-                <dd>{view.notional}</dd>
+                <dd>{deskDetail ? deskDetail.notional : view.notional}</dd>
               </div>
               <div>
                 <dt>Unrealized</dt>
-                <dd className={moneyClass(view.unrealized.tone)}>{view.unrealized.text}</dd>
+                <dd className={moneyClass(deskDetail?.unrealizedTone ?? view.unrealized.tone)}>
+                  {deskDetail ? deskDetail.unrealizedText : view.unrealized.text}
+                </dd>
               </div>
               <div>
                 <dt>Paper PnL</dt>
-                <dd className={moneyClass(view.paperPnl.tone)}>{view.paperPnl.text}</dd>
+                <dd className={moneyClass(deskDetail?.paperTone ?? view.paperPnl.tone)}>
+                  {deskDetail ? deskDetail.paperText : view.paperPnl.text}
+                </dd>
               </div>
               <div>
                 <dt>Resting</dt>
-                <dd>{view.resting}</dd>
+                <dd>{deskDetail ? "—" : view.resting}</dd>
               </div>
               <div>
                 <dt>Quote</dt>
-                <dd>{view.quote.text}</dd>
+                <dd>{deskDetail ? "—" : view.quote.text}</dd>
               </div>
               <div>
                 <dt>Fills</dt>
-                <dd>{view.stats.fills}</dd>
+                <dd>{deskDetail ? "—" : view.stats.fills}</dd>
               </div>
               <div>
                 <dt>Late blocks</dt>
-                <dd>{view.stats.blockedLate}</dd>
+                <dd>{deskDetail ? "—" : view.stats.blockedLate}</dd>
               </div>
             </dl>
           </div>
