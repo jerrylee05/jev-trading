@@ -113,42 +113,34 @@ export default function Desk({
   })();
   // Unresolved / no desk bars: quiet decision strip (no MON orphan probs).
   const deskQuiet = usingDesk && (desk.bars.length + (desk.live ? 1 : 0)) === 0;
-  const deskQty = deskPos?.qty ?? 0;
-  // Jerry "seconds" bar: owned desk position wins over stale decision / MON bleed.
+  // Jerry raise: paint model decision (action + probs + latency), not position.
+  // Position stays in SymbolDetail. Never fall back to MON when desk is primary.
   const showAction = !usingDesk
     ? view.late.text === "true" && view.carriedAction
       ? view.carriedAction
       : view.action
     : deskQuiet
       ? "—"
-      : deskQty > 0
+      : deskUi?.action === "buy"
         ? "LONG"
-        : deskQty < 0
+        : deskUi?.action === "sell"
           ? "SHORT"
-          : deskUi?.action === "buy"
-            ? "LONG"
-            : deskUi?.action === "sell"
-              ? "SHORT"
-              : deskUi
-                ? "HOLD"
-                : "—";
+          : deskUi
+            ? "FLAT"
+            : "—";
   const showTone = !usingDesk
     ? view.late.text === "true" && view.carriedAction
       ? "hold"
       : view.actionTone
     : deskQuiet
       ? "empty"
-      : deskQty > 0
+      : deskUi?.action === "buy"
         ? "long"
-        : deskQty < 0
+        : deskUi?.action === "sell"
           ? "short"
-          : deskUi?.action === "buy"
-            ? "long"
-            : deskUi?.action === "sell"
-              ? "short"
-              : deskUi
-                ? "hold"
-                : "empty";
+          : deskUi
+            ? "hold"
+            : "empty";
   const carried = usingDesk
     ? deskQuiet
       ? null
@@ -183,7 +175,7 @@ export default function Desk({
       ? [
           { name: "LONG", width: 0, label: "—", tone: "long" as const },
           { name: "SHORT", width: 0, label: "—", tone: "short" as const },
-          { name: "HOLD", width: 0, label: "—", tone: "hold" as const },
+          { name: "FLAT", width: 0, label: "—", tone: "hold" as const },
         ]
       : [
           {
@@ -199,7 +191,7 @@ export default function Desk({
             tone: "short" as const,
           },
           {
-            name: "HOLD",
+            name: "FLAT",
             width: Math.round(deskDec.p_flat * 100),
             label: `${(deskDec.p_flat * 100).toFixed(0)}%`,
             tone: "hold" as const,
@@ -228,6 +220,17 @@ export default function Desk({
     if (!res.ok) setFormErr(res.error);
   }
 
+  const deskModelRaw = (desk.status?.modelName || desk.status?.model || "mock").trim();
+  const deskModelShort = /jev/i.test(deskModelRaw)
+    ? deskModelRaw.toLowerCase().includes("jev") && !deskModelRaw.toLowerCase().startsWith("mock")
+      ? deskModelRaw.replace(/^typesafe-ai\//i, "").slice(0, 24)
+      : "jev"
+    : deskModelRaw.toLowerCase().startsWith("mock") || deskModelRaw === ""
+      ? "mock"
+      : deskModelRaw.slice(0, 24);
+  const modelPill = usingDesk ? `MODEL=${deskModelShort}` : view.modelPill;
+  const modelIsJev = usingDesk ? /jev/i.test(deskModelRaw) && !/^mock$/i.test(deskModelRaw) : view.modelIsJev;
+
   return (
     <div className={styles.shell}>
       <header className={styles.topBar}>
@@ -243,7 +246,7 @@ export default function Desk({
         </div>
         <div className={styles.topPills}>
           <span className={styles.pill}>{view.dryRunPill}</span>
-          <span className={view.modelIsJev ? styles.pillJev : styles.pill}>{view.modelPill}</span>
+          <span className={modelIsJev ? styles.pillJev : styles.pill}>{modelPill}</span>
         </div>
       </header>
 
@@ -269,7 +272,7 @@ export default function Desk({
                 <span className={styles.val}>{stripBlock}</span>
               </div>
               <div>
-                <span className={styles.lbl}>upIn10</span>
+                <span className={styles.lbl}>{usingDesk ? "p_long" : "upIn10"}</span>
                 <span className={styles.val}>{stripUpIn10}</span>
               </div>
             </div>
@@ -422,7 +425,7 @@ export default function Desk({
           desk {desk.connection}
         </span>
         <span className={styles.statusItem}>dryRun {paper ? "true" : "false"}</span>
-        <span className={styles.statusItem}>{view.modelPill}</span>
+        <span className={styles.statusItem}>{modelPill}</span>
         <span className={styles.statusItem}>latency {view.latency}</span>
         <span className={styles.statusItem}>uptime {uptime}</span>
         <span className={styles.statusItem}>api {deskUrl.replace(/^https?:\/\//, "")}</span>

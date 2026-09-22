@@ -1,0 +1,14 @@
+{
+  "tip_pending": true,
+  "msToDecision": 328,
+  "under3s": true,
+  "model": "MODEL=JEV",
+  "decision": "LONG",
+  "latency_ms": 21,
+  "desk": "live",
+  "ports": {
+    "web": 3001,
+    "desk": 3020
+  },
+  "notes": "Decision paints model action+probs+latency; position separate in SymbolDetail; LaunchAgent MODEL=jev with AI_GATEWAY_API_KEY"
+}
